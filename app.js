@@ -112,7 +112,9 @@
   const exportCsvOption = document.getElementById('exportCsvOption');
   const backupJsonOption = document.getElementById('backupJsonOption');
   const restoreJsonInput = document.getElementById('restoreJsonInput');
-  const themeToggleOption = document.getElementById('themeToggleOption');
+  const themeToggleBtn = document.getElementById('themeToggleBtn');
+  const themeIconSun = document.getElementById('themeIconSun');
+  const themeIconMoon = document.getElementById('themeIconMoon');
   const installAppOption = document.getElementById('installAppOption');
 
   // Import Bank Statement Elements
@@ -916,25 +918,30 @@
     e.target.value = '';
   });
 
-  // --- Theme Toggle ---
+  // --- Theme Toggle (Standalone Swinglytics Style) ---
   function applyTheme(isDark) {
     if (isDark) {
       document.documentElement.classList.add('dark');
       localStorage.setItem(STORAGE_KEY_THEME, 'dark');
       document.getElementById('themeColorMeta').setAttribute('content', '#0b0f17');
+      if (themeIconSun) themeIconSun.classList.remove('hidden');
+      if (themeIconMoon) themeIconMoon.classList.add('hidden');
     } else {
       document.documentElement.classList.remove('dark');
       localStorage.setItem(STORAGE_KEY_THEME, 'light');
       document.getElementById('themeColorMeta').setAttribute('content', '#ffffff');
+      if (themeIconSun) themeIconSun.classList.add('hidden');
+      if (themeIconMoon) themeIconMoon.classList.remove('hidden');
     }
     refreshView();
   }
 
-  themeToggleOption.addEventListener('click', () => {
-    const isDark = document.documentElement.classList.contains('dark');
-    applyTheme(!isDark);
-    moreMenuDropdown.classList.add('hidden');
-  });
+  if (themeToggleBtn) {
+    themeToggleBtn.addEventListener('click', () => {
+      const isDark = document.documentElement.classList.contains('dark');
+      applyTheme(!isDark);
+    });
+  }
 
   // Initialize Theme
   const savedTheme = localStorage.getItem(STORAGE_KEY_THEME);
