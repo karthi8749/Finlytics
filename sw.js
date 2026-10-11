@@ -1,13 +1,14 @@
-// Spendings Tracker Service Worker
-const CACHE_NAME = 'spendings-tracker-v1';
+// Finlytics Service Worker
+const CACHE_NAME = 'finlytics-v4';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
   './app.js',
   './manifest.json',
-  './logo.svg',
+  './logo.png',
   './icon-192.png',
-  './icon-512.png'
+  './icon-512.png',
+  './apple-touch-icon.png'
 ];
 
 self.addEventListener('install', (event) => {

@@ -3,17 +3,17 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Spendings Tracker - INR Expense Analytics</title>
+  <title>Finlytics - Expense & Finance Analytics</title>
   <!-- Favicon / Tab Logo -->
-  <link rel="icon" type="image/svg+xml" href="logo.svg" />
+  <link rel="icon" type="image/png" href="icon-192.png" />
   <!-- PWA Manifest & Capabilities -->
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#0b0f17" id="themeColorMeta" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="Spendings" />
-  <link rel="apple-touch-icon" href="icon-192.png" />
+  <meta name="apple-mobile-web-app-title" content="Finlytics" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
 
   <!-- Tailwind CSS via CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -21,6 +21,18 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <!-- PapaParse for Bank Statement Parsing -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <!-- SheetJS (XLSX) for SBI Excel Statements (.xls / .xlsx) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- PDF.js for Password-Protected SBI PDF Statements (.pdf) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>
+    if (window.pdfjsLib) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+  </script>
+  <!-- Firebase App & Realtime Database SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
 
@@ -84,12 +96,12 @@
     <div class="w-full px-3 sm:px-6 lg:px-8 h-[72px] sm:h-[80px] flex items-center justify-between gap-2">
       <!-- Logo + Brand -->
       <div class="flex items-center gap-2 sm:gap-3 shrink-0">
-        <img src="logo.svg" alt="Spendings Logo" class="h-10 sm:h-12 w-auto object-contain shrink-0 drop-shadow" />
+        <img src="logo.png" alt="Finlytics Logo" class="h-10 sm:h-12 w-auto object-contain shrink-0 drop-shadow rounded-lg" />
         <div>
           <h1 class="text-base sm:text-xl tracking-tight text-slate-900 dark:text-white font-brand">
-            Spendings<span class="text-emerald-500 font-bold">.</span>
+            Finlytics<span class="text-emerald-500 font-bold">.</span>
           </h1>
-          <p class="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium hidden sm:block">Monthly INR Analytics & Budget</p>
+          <p class="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium hidden sm:block">Personal Finance & Spendings Analytics</p>
         </div>
       </div>
 
@@ -143,6 +155,10 @@
               <i data-lucide="file-up" class="w-4 h-4 text-emerald-400"></i>
               <span>Import Bank Statement</span>
             </button>
+            <button id="openSyncModalOption" class="w-full text-left px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-700/60 flex items-center gap-2.5 text-slate-700 dark:text-slate-200">
+              <i data-lucide="radio" class="w-4 h-4 text-emerald-400"></i>
+              <span>SMS Auto-Sync Setup</span>
+            </button>
             <button id="setBudgetOption" class="w-full text-left px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-700/60 flex items-center gap-2.5 text-slate-700 dark:text-slate-200">
               <i data-lucide="target" class="w-4 h-4 text-emerald-400"></i>
               <span>Set Monthly Budget</span>
@@ -164,6 +180,11 @@
               <i data-lucide="smartphone" class="w-4 h-4"></i>
               <span>Install Mobile App</span>
             </button>
+            <div class="border-t border-slate-100 dark:border-slate-700/60 my-1"></div>
+            <button id="clearAllDataOption" class="w-full text-left px-4 py-2 hover:bg-rose-500/10 flex items-center gap-2.5 text-rose-500 font-medium">
+              <i data-lucide="trash-2" class="w-4 h-4"></i>
+              <span>Clear All Expenses</span>
+            </button>
           </div>
         </div>
       </div>
@@ -171,33 +192,30 @@
   </header>
 
   <!-- Main Container (Full Width - Zero Wasted Space) -->
-  <main class="w-full max-w-full px-3 sm:px-6 lg:px-8 py-4 sm:py-5 space-y-4 sm:space-y-6 overflow-x-hidden">
+  <main class="w-full max-w-full px-3 sm:px-6 lg:px-8 py-4 sm:py-5 space-y-4 sm:space-y-6 overflow-x-hidden pb-24 sm:pb-6">
 
     <!-- Section 1: KPI Cards -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-      <!-- Card 1: Total Spent -->
+      <!-- Card 1: Total Spent with MoM Growth Badge -->
       <div class="bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-4 sm:p-5 relative overflow-hidden shadow-sm">
         <div class="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs font-semibold mb-2">
           <span>Total Spent</span>
-          <div class="w-7 h-7 rounded-lg bg-rose-500/10 text-rose-500 flex items-center justify-center">
-            <i data-lucide="trending-up" class="w-4 h-4"></i>
-          </div>
+          <span id="kpiMomBadge" class="hidden text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400">MoM 0%</span>
         </div>
         <div class="text-xl sm:text-2xl lg:text-3xl font-extrabold mono text-slate-900 dark:text-white" id="kpiTotalSpent">
           ₹0.00
         </div>
-        <div class="text-[11px] text-slate-400 mt-1 flex items-center gap-1" id="kpiExpenseCount">
-          0 transactions
+        <div class="text-[11px] text-slate-400 mt-1 flex items-center justify-between" id="kpiExpenseCount">
+          <span>0 transactions</span>
+          <span id="kpiMomComparisonText" class="text-[10px] font-medium text-slate-400">vs prev month</span>
         </div>
       </div>
 
-      <!-- Card 2: Budget & Remaining -->
+      <!-- Card 2: Budget & Spending Velocity Burn Rate -->
       <div class="bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-4 sm:p-5 relative overflow-hidden shadow-sm">
         <div class="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs font-semibold mb-2">
           <span>Budget Remaining</span>
-          <div class="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
-            <i data-lucide="target" class="w-4 h-4"></i>
-          </div>
+          <span id="kpiVelocityBadge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400">Normal Pace</span>
         </div>
         <div class="text-xl sm:text-2xl lg:text-3xl font-extrabold mono text-emerald-500" id="kpiRemainingBudget">
           ₹0.00
@@ -207,7 +225,7 @@
         </div>
         <div class="text-[10px] text-slate-400 mt-1 flex justify-between" id="kpiBudgetMessage">
           <span>Target: ₹30,000</span>
-          <span id="budgetPct">0% used</span>
+          <span id="kpiBurnRateEstimate">Burn: Safe</span>
         </div>
       </div>
 
@@ -308,6 +326,64 @@
       </div>
     </div>
 
+    <!-- Section 3B: Advanced Intelligence Metrics (Top Merchants & Weekend vs Weekday) -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+      <!-- Top 5 Merchants Leaderboard -->
+      <div class="bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-4 sm:p-5 shadow-sm space-y-3">
+        <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-3">
+          <h2 class="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-2">
+            <i data-lucide="trophy" class="w-4 h-4 text-amber-400"></i>
+            Top 5 Merchants & Payees
+          </h2>
+          <span class="text-[10px] text-slate-400">Highest spend</span>
+        </div>
+        <div id="topMerchantsList" class="space-y-2.5">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <!-- Weekend vs Weekday Spend Pattern -->
+      <div class="bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-4 sm:p-5 shadow-sm space-y-3">
+        <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-3">
+          <h2 class="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-2">
+            <i data-lucide="sun-moon" class="w-4 h-4 text-indigo-400"></i>
+            Weekend vs Weekday Spend Pattern
+          </h2>
+          <span class="text-[10px] text-slate-400">Spending habits</span>
+        </div>
+        
+        <div class="space-y-3 pt-1">
+          <!-- Progress Bar Comparison -->
+          <div>
+            <div class="flex justify-between text-xs font-semibold mb-1.5">
+              <span class="flex items-center gap-1.5 text-indigo-400">
+                <span>🗓️ Weekdays (Mon-Fri)</span>
+                <span id="weekdayAmount" class="font-bold text-slate-900 dark:text-white">₹0</span>
+              </span>
+              <span class="flex items-center gap-1.5 text-pink-400">
+                <span id="weekendAmount" class="font-bold text-slate-900 dark:text-white">₹0</span>
+                <span>🏖️ Weekends (Sat-Sun)</span>
+              </span>
+            </div>
+            <div class="w-full h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden flex">
+              <div id="weekdayBar" class="bg-indigo-500 h-full transition-all duration-500" style="width: 50%;"></div>
+              <div id="weekendBar" class="bg-pink-500 h-full transition-all duration-500" style="width: 50%;"></div>
+            </div>
+            <div class="flex justify-between text-[11px] text-slate-400 mt-1 font-medium">
+              <span id="weekdayPct">50%</span>
+              <span id="weekendPct">50%</span>
+            </div>
+          </div>
+
+          <!-- Insight pill -->
+          <div id="weekendInsightPill" class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 text-xs flex items-center gap-2.5">
+            <i data-lucide="lightbulb" class="w-4 h-4 text-amber-400 shrink-0"></i>
+            <span id="weekendInsightText" class="text-slate-600 dark:text-slate-300">Analyzing your spending behavior pattern...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Section 4: Expense Log (Filters, Search & Table / Mobile Cards) -->
     <div class="bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-4 sm:p-5 shadow-sm space-y-4">
       
@@ -328,17 +404,10 @@
         </div>
       </div>
 
-      <!-- Quick Category Filter Pills -->
+      <!-- Quick Category Filter Pills + Add Category Button -->
       <div class="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs" id="categoryFilterPills">
         <button data-cat="all" class="px-2.5 py-1 rounded-lg font-semibold bg-emerald-500 text-slate-950 transition shrink-0 active:scale-95">All</button>
-        <button data-cat="Food & Dining" class="px-2.5 py-1 rounded-lg font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition shrink-0">🍔 Food</button>
-        <button data-cat="Groceries" class="px-2.5 py-1 rounded-lg font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition shrink-0">🛒 Groceries</button>
-        <button data-cat="Travel & Fuel" class="px-2.5 py-1 rounded-lg font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition shrink-0">🚗 Travel</button>
-        <button data-cat="Bills & Utilities" class="px-2.5 py-1 rounded-lg font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition shrink-0">⚡ Bills</button>
-        <button data-cat="Shopping" class="px-2.5 py-1 rounded-lg font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition shrink-0">🛍️ Shopping</button>
-        <button data-cat="Entertainment" class="px-2.5 py-1 rounded-lg font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition shrink-0">🎬 Entertainment</button>
-        <button data-cat="Health" class="px-2.5 py-1 rounded-lg font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition shrink-0">💊 Health</button>
-        <button data-cat="Others" class="px-2.5 py-1 rounded-lg font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition shrink-0">📦 Others</button>
+        <!-- Categories populated dynamically + button to add new -->
       </div>
 
       <!-- Desktop Table View (Hidden on Small Mobile) -->
@@ -375,6 +444,30 @@
       </div>
     </div>
   </main>
+
+  <!-- Mobile Fixed Bottom App Navigation Bar (PWA Phone Experience) -->
+  <nav class="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-[#0b0f17]/95 backdrop-blur-lg border-t border-slate-200 dark:border-slate-800 px-4 py-2 flex items-center justify-around shadow-2xl safe-area-pb">
+    <button id="mobileNavHomeBtn" class="flex flex-col items-center gap-1 text-emerald-500 font-bold">
+      <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+      <span class="text-[10px]">Dashboard</span>
+    </button>
+    <button id="mobileNavImportBtn" class="flex flex-col items-center gap-1 text-slate-500 dark:text-slate-400 hover:text-emerald-400">
+      <i data-lucide="file-up" class="w-5 h-5"></i>
+      <span class="text-[10px]">Import</span>
+    </button>
+    <!-- Big Center Add Button -->
+    <button id="mobileNavAddBtn" class="-mt-5 w-12 h-12 rounded-full bg-emerald-500 text-slate-950 font-bold flex items-center justify-center shadow-lg shadow-emerald-500/30 active:scale-95 transition">
+      <i data-lucide="plus" class="w-6 h-6"></i>
+    </button>
+    <button id="mobileNavSyncBtn" class="flex flex-col items-center gap-1 text-slate-500 dark:text-slate-400 hover:text-emerald-400">
+      <i data-lucide="radio" class="w-5 h-5"></i>
+      <span class="text-[10px]">SMS Sync</span>
+    </button>
+    <button id="mobileNavBudgetBtn" class="flex flex-col items-center gap-1 text-slate-500 dark:text-slate-400 hover:text-emerald-400">
+      <i data-lucide="target" class="w-5 h-5"></i>
+      <span class="text-[10px]">Budget</span>
+    </button>
+  </nav>
 
   <!-- Modal: Add / Edit Expense -->
   <div id="expenseModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-3">
@@ -505,7 +598,7 @@
             <i data-lucide="file-up" class="w-5 h-5 text-emerald-500"></i>
             Import Bank Statement
           </h3>
-          <p class="text-xs text-slate-400 mt-0.5">Upload HDFC, SBI, ICICI, Axis, Kotak or any CSV statement</p>
+          <p class="text-xs text-slate-400 mt-0.5">Supports SBI PDF, Excel (.xlsx/.xls) & CSV</p>
         </div>
         <button id="closeImportModalBtn" class="text-slate-400 hover:text-slate-200 p-1">
           <i data-lucide="x" class="w-5 h-5"></i>
@@ -517,15 +610,33 @@
         
         <!-- File Dropzone -->
         <div id="dropzoneContainer" class="border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-emerald-500 dark:hover:border-emerald-500 rounded-2xl p-6 text-center cursor-pointer transition bg-slate-50/50 dark:bg-slate-800/30">
-          <input type="file" id="bankStatementFileInput" accept=".csv,.txt" class="hidden" />
+          <input type="file" id="bankStatementFileInput" accept=".pdf,.xlsx,.xls,.csv,.txt" class="hidden" />
           <div class="w-12 h-12 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center mx-auto mb-2">
             <i data-lucide="upload-cloud" class="w-6 h-6"></i>
           </div>
           <p class="text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200">
-            Click to upload or drag & drop Bank Statement CSV
+            Click to upload or drag & drop SBI Statement (<span class="text-emerald-400 font-bold">PDF, Excel, CSV</span>)
           </p>
-          <p class="text-[11px] text-slate-400 mt-1">
-            Supports Standard Indian Banks (SBI, HDFC, ICICI, Axis, Kotak, Canara, UPI app logs)
+          <p class="text-[11px] text-slate-400 mt-1">Supports SBI password-protected files & standard formats</p>
+        </div>
+
+        <!-- Optional / Manual Password Input for Protected Statement -->
+        <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-1.5">
+          <div class="flex items-center justify-between">
+            <label class="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+              <i data-lucide="lock" class="w-3.5 h-3.5 text-emerald-500"></i>
+              <span>Statement Password (PDF / Excel)</span>
+            </label>
+            <span class="text-[10px] text-slate-400">Manual / Secure</span>
+          </div>
+          <div class="relative">
+            <input type="password" id="statementPasswordInput" placeholder="Enter password (e.g. 67668231002)" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 pr-9 text-xs text-slate-900 dark:text-white font-mono focus:outline-none focus:border-emerald-500" />
+            <button type="button" id="togglePasswordVisibilityBtn" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 p-0.5" title="Show / Hide Password">
+              <i data-lucide="eye" id="passwordEyeIcon" class="w-4 h-4"></i>
+            </button>
+          </div>
+          <p class="text-[10px] text-slate-400">
+            Password is processed 100% locally on your browser. Never sent to any server.
           </p>
         </div>
 
@@ -573,6 +684,160 @@
         </button>
       </div>
 
+    </div>
+  </div>
+
+  <!-- Modal: Automatic Bank SMS Sync Setup -->
+  <div id="syncModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-3">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-lg p-5 sm:p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
+      
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+        <div>
+          <h3 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <i data-lucide="radio" class="w-5 h-5 text-emerald-500"></i>
+            Live SMS Auto-Sync Setup
+          </h3>
+          <p class="text-xs text-slate-400 mt-0.5">Instant spend logging via Google Firebase & Phone SMS</p>
+        </div>
+        <button id="closeSyncModalBtn" class="text-slate-400 hover:text-slate-200 p-1">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="py-4 space-y-4 text-xs">
+        <!-- Status indicator -->
+        <div id="syncStatusBox" class="p-3 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 flex items-center justify-between">
+          <div class="flex items-center gap-2.5">
+            <div id="syncStatusDot" class="w-2.5 h-2.5 rounded-full bg-slate-400"></div>
+            <span id="syncStatusText" class="font-semibold text-slate-700 dark:text-slate-200">Sync: Offline / Not Configured</span>
+          </div>
+          <span id="syncDeviceTag" class="text-[10px] text-slate-400">Local Only</span>
+        </div>
+
+        <!-- 3 Quick Setup Steps -->
+        <div class="space-y-2.5 text-slate-600 dark:text-slate-300">
+          <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 space-y-1">
+            <div class="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+              <span class="w-4 h-4 rounded-full bg-emerald-500 text-slate-950 font-bold text-[10px] flex items-center justify-center">1</span>
+              <span>Create Free Google Firebase Project</span>
+            </div>
+            <p class="text-[11px] text-slate-400">
+              Open <a href="https://console.firebase.google.com" target="_blank" class="text-emerald-400 underline font-semibold">Firebase Console</a> with your Google account, click "Add Project", create a <strong>Realtime Database</strong> in test mode, and copy your Database URL.
+            </p>
+          </div>
+
+          <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 space-y-2">
+            <div class="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+              <span class="w-4 h-4 rounded-full bg-emerald-500 text-slate-950 font-bold text-[10px] flex items-center justify-center">2</span>
+              <span>Paste Database URL & Auth Key</span>
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Firebase Database URL *</label>
+              <input type="text" id="firebaseDbUrlInput" placeholder="https://your-app-default-rtdb.firebaseio.com" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 dark:text-white font-mono focus:outline-none focus:border-emerald-500" />
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Secret Sync Token / Password (Any secret key) *</label>
+              <input type="password" id="firebaseSyncTokenInput" placeholder="my_secret_token_123" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 dark:text-white font-mono focus:outline-none focus:border-emerald-500" />
+            </div>
+          </div>
+
+          <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 space-y-1">
+            <div class="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+              <span class="w-4 h-4 rounded-full bg-emerald-500 text-slate-950 font-bold text-[10px] flex items-center justify-center">3</span>
+              <span>MacroDroid on Android Phone</span>
+            </div>
+            <p class="text-[11px] text-slate-400">
+              In MacroDroid: Trigger = <code>SMS Received (*debited*)</code>. Action = <code>HTTP Request POST</code> with the URL below.
+            </p>
+            <div class="bg-black/40 p-2 rounded border border-slate-700/80 font-mono text-[10px] text-emerald-400 break-all select-all" id="macroDroidUrlDisplay">
+              Configure URL & Token above to generate phone webhook URL
+            </div>
+          </div>
+        </div>
+
+        <!-- Direct Test SMS Parser Box -->
+        <div class="border-t border-slate-100 dark:border-slate-800 pt-3 space-y-2">
+          <label class="block font-bold text-slate-900 dark:text-white flex items-center justify-between">
+            <span>Instant Test: Paste Any Bank SMS Below</span>
+            <span class="text-[10px] font-normal text-slate-400">Test parser live</span>
+          </label>
+          <div class="flex gap-2">
+            <input type="text" id="testSmsInput" placeholder="e.g. A/C 1002 debited by Rs 450.00 on 12-10-26 transfer to Swiggy UPI Ref 429182" class="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500" />
+            <button type="button" id="testSmsParseBtn" class="px-3 py-1.5 rounded-xl bg-emerald-500 text-slate-950 font-bold hover:bg-emerald-600 transition shrink-0">
+              Parse SMS
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0">
+        <button type="button" id="cancelSyncBtn" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition">Close</button>
+        <button type="button" id="saveSyncConfigBtn" class="px-5 py-2 rounded-xl text-xs font-bold bg-emerald-500 hover:bg-emerald-600 text-slate-950 transition shadow-lg shadow-emerald-500/20 active:scale-95">Save & Connect</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Modal: Add New Custom Category -->
+  <div id="customCategoryModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-3">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-sm p-5 shadow-2xl relative animate-in fade-in zoom-in-95 duration-150">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+        <h3 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+          <i data-lucide="tag" class="w-5 h-5 text-emerald-500"></i>
+          Add Custom Category
+        </h3>
+        <button id="closeCategoryModalBtn" class="text-slate-400 hover:text-slate-200 p-1">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="customCategoryForm" class="mt-4 space-y-3.5">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Category Name *</label>
+          <input type="text" id="newCategoryNameInput" required placeholder="e.g. Investment, Pets, Rent, Books" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Emoji Icon</label>
+            <input type="text" id="newCategoryIconInput" value="🏷️" placeholder="🏷️" class="w-full text-center bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 text-base text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Theme Color</label>
+            <input type="color" id="newCategoryColorInput" value="#10b981" class="w-full h-9 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-1 cursor-pointer" />
+          </div>
+        </div>
+
+        <div class="pt-2 flex items-center justify-end gap-2">
+          <button type="button" id="cancelCategoryModalBtn" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition">Cancel</button>
+          <button type="submit" class="px-5 py-2 rounded-xl text-xs font-bold bg-emerald-500 hover:bg-emerald-600 text-slate-950 transition shadow-lg shadow-emerald-500/20 active:scale-95">Create Category</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Permission Prompt for Batch Category Update -->
+  <div id="batchCategoryModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-3">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md p-5 shadow-2xl relative animate-in fade-in zoom-in-95 duration-150 space-y-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center shrink-0">
+          <i data-lucide="sparkles" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <h3 class="text-sm font-bold text-slate-900 dark:text-white">Smart Category Update</h3>
+          <p class="text-xs text-slate-400">Apply to matching expenses?</p>
+        </div>
+      </div>
+
+      <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs text-slate-700 dark:text-slate-300 space-y-1">
+        <p>You changed category for <strong id="batchMerchantName" class="text-emerald-400">Swiggy</strong> to <strong id="batchNewCategory" class="text-emerald-400">Food & Dining</strong>.</p>
+        <p class="text-slate-400">Found <strong id="batchMatchCount" class="text-white">0</strong> other past transactions from the same merchant.</p>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-1">
+        <button type="button" id="batchSkipBtn" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition">Update Only This One</button>
+        <button type="button" id="batchConfirmBtn" class="px-5 py-2 rounded-xl text-xs font-bold bg-emerald-500 hover:bg-emerald-600 text-slate-950 transition shadow-lg shadow-emerald-500/20 active:scale-95">Update All Matching</button>
+      </div>
     </div>
   </div>
 

@@ -1,8 +1,8 @@
 {
-  "id": "spendings-tracker-v1",
-  "name": "Spendings Tracker - INR Expense Analytics",
-  "short_name": "Spendings",
-  "description": "Deep Expense Analytics, Monthly Budgets, Category Insights & UPI Spend Log",
+  "id": "finlytics-v1",
+  "name": "Finlytics - Expense & Finance Analytics",
+  "short_name": "Finlytics",
+  "description": "Professional Personal Finance & Spendings Analytics, Monthly Budgets, and Bank Statement Import",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

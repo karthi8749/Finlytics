@@ -9,27 +9,50 @@
   const STORAGE_KEY_BUDGET = 'spendings_tracker_monthly_budget_v1';
   const STORAGE_KEY_THEME = 'spendings_tracker_theme_v1';
 
-  const CATEGORY_COLORS = {
-    'Food & Dining': '#f97316',      // Orange
-    'Groceries': '#10b981',          // Emerald
-    'Travel & Fuel': '#3b82f6',       // Blue
-    'Bills & Utilities': '#8b5cf6',   // Purple
-    'Shopping': '#ec4899',           // Pink
-    'Entertainment': '#eab308',      // Amber
-    'Health': '#06b6d4',             // Cyan
-    'Others': '#64748b'              // Slate
+  const STORAGE_KEY_CUSTOM_CATS = 'finlytics_custom_categories_v1';
+
+  // Default Categories
+  const DEFAULT_CATEGORIES = {
+    'Food & Dining': { color: '#f97316', icon: '🍔' },
+    'Groceries': { color: '#10b981', icon: '🛒' },
+    'Travel & Fuel': { color: '#3b82f6', icon: '🚗' },
+    'Bills & Utilities': { color: '#8b5cf6', icon: '⚡' },
+    'Shopping': { color: '#ec4899', icon: '🛍️' },
+    'Entertainment': { color: '#eab308', icon: '🎬' },
+    'Health': { color: '#06b6d4', icon: '💊' },
+    'Others': { color: '#64748b', icon: '📦' }
   };
 
-  const CATEGORY_ICONS = {
-    'Food & Dining': '🍔',
-    'Groceries': '🛒',
-    'Travel & Fuel': '🚗',
-    'Bills & Utilities': '⚡',
-    'Shopping': '🛍️',
-    'Entertainment': '🎬',
-    'Health': '💊',
-    'Others': '📦'
-  };
+  let CATEGORY_REGISTRY = { ...DEFAULT_CATEGORIES };
+
+  function loadCategories() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY_CUSTOM_CATS);
+      if (raw) {
+        const custom = JSON.parse(raw);
+        CATEGORY_REGISTRY = { ...DEFAULT_CATEGORIES, ...custom };
+      }
+    } catch (e) {
+      console.warn('Failed to load custom categories', e);
+    }
+  }
+
+  function saveCategories() {
+    localStorage.setItem(STORAGE_KEY_CUSTOM_CATS, JSON.stringify(CATEGORY_REGISTRY));
+  }
+
+  // Accessor helpers
+  const CATEGORY_COLORS = new Proxy({}, {
+    get(target, prop) {
+      return CATEGORY_REGISTRY[prop] ? CATEGORY_REGISTRY[prop].color : '#64748b';
+    }
+  });
+
+  const CATEGORY_ICONS = new Proxy({}, {
+    get(target, prop) {
+      return CATEGORY_REGISTRY[prop] ? CATEGORY_REGISTRY[prop].icon : '🏷️';
+    }
+  });
 
   const DEFAULT_SAMPLE_DATA = [
     { id: 'exp_1', title: 'Groceries Supermarket', amount: 3450.00, category: 'Groceries', paymentMode: 'UPI', date: '2026-10-02', notes: 'Monthly essentials' },
@@ -362,6 +385,89 @@
     }
 
     categoryChartTotal.textContent = formatINR(totalSpent);
+
+    // --- Metric 4: Month-over-Month (MoM) % Growth Pill ---
+    const kpiMomBadge = document.getElementById('kpiMomBadge');
+    const kpiMomComparisonText = document.getElementById('kpiMomComparisonText');
+
+    if (kpiMomBadge) {
+      let currentMonthSpent = totalSpent;
+      let prevMonthSpent = 0;
+      let prevMonthName = '';
+
+      if (selectedMonth === 'all') {
+        // Compare latest month with second latest month
+        const allMonths = getAvailableMonths();
+        if (allMonths.length >= 2) {
+          const m1 = allMonths[0]; // newest
+          const m2 = allMonths[1]; // previous
+          currentMonthSpent = expenses.filter(e => e.date && e.date.startsWith(m1)).reduce((s, e) => s + e.amount, 0);
+          prevMonthSpent = expenses.filter(e => e.date && e.date.startsWith(m2)).reduce((s, e) => s + e.amount, 0);
+          prevMonthName = getMonthName(m2).split(' ')[0];
+        }
+      } else {
+        // Find previous chronological month
+        const [currY, currM] = selectedMonth.split('-').map(Number);
+        const prevDate = new Date(currY, currM - 2, 1);
+        const prevYm = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
+        prevMonthSpent = expenses.filter(e => e.date && e.date.startsWith(prevYm)).reduce((s, e) => s + e.amount, 0);
+        prevMonthName = prevDate.toLocaleDateString('en-IN', { month: 'short' });
+      }
+
+      if (prevMonthSpent > 0) {
+        const diff = currentMonthSpent - prevMonthSpent;
+        const pctChange = ((diff / prevMonthSpent) * 100).toFixed(1);
+        kpiMomBadge.classList.remove('hidden');
+
+        if (diff > 0) {
+          kpiMomBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-500 flex items-center gap-0.5';
+          kpiMomBadge.innerHTML = `<span>+${pctChange}%</span> <span>↑</span>`;
+          if (kpiMomComparisonText) kpiMomComparisonText.textContent = `+${formatINR(diff)} vs ${prevMonthName}`;
+        } else {
+          kpiMomBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center gap-0.5';
+          kpiMomBadge.innerHTML = `<span>${pctChange}%</span> <span>↓</span>`;
+          if (kpiMomComparisonText) kpiMomComparisonText.textContent = `Saved ${formatINR(Math.abs(diff))} vs ${prevMonthName}`;
+        }
+      } else {
+        kpiMomBadge.classList.add('hidden');
+        if (kpiMomComparisonText) kpiMomComparisonText.textContent = `${count} total transactions`;
+      }
+    }
+
+    // --- Metric 3: Spending Velocity / Burn Rate Alert ---
+    const kpiVelocityBadge = document.getElementById('kpiVelocityBadge');
+    const kpiBurnRateEstimate = document.getElementById('kpiBurnRateEstimate');
+
+    if (kpiVelocityBadge && kpiBurnRateEstimate) {
+      if (targetBudget <= 0) {
+        kpiVelocityBadge.textContent = 'No Limit Set';
+        kpiVelocityBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400';
+        kpiBurnRateEstimate.textContent = 'Set monthly budget';
+      } else {
+        // How many days left in the month
+        const daysLeft = Math.max(1, daysInPeriod - daysPassed);
+        const remainingBudget = targetBudget - totalSpent;
+        
+        if (remainingBudget <= 0) {
+          kpiVelocityBadge.textContent = 'Budget Exceeded 🔥';
+          kpiVelocityBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-500';
+          kpiBurnRateEstimate.textContent = `Over limit by ${formatINR(Math.abs(remainingBudget))}`;
+        } else {
+          const burnDaysLeft = dailyAvg > 0 ? (remainingBudget / dailyAvg) : 999;
+
+          if (burnDaysLeft < daysLeft) {
+            const outDate = Math.min(daysInPeriod, Math.round(daysPassed + burnDaysLeft));
+            kpiVelocityBadge.textContent = `Fast Burn Rate ⚡`;
+            kpiVelocityBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400';
+            kpiBurnRateEstimate.textContent = `Exhausts around day ${outDate}`;
+          } else {
+            kpiVelocityBadge.textContent = `Safe Pace 🛡️`;
+            kpiVelocityBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400';
+            kpiBurnRateEstimate.textContent = `Safe: ₹${(remainingBudget / daysLeft).toFixed(0)}/day left`;
+          }
+        }
+      }
+    }
   }
 
   // --- Render Visual Charts ---
@@ -623,6 +729,101 @@
         }
       }
     });
+
+    // --- Metric 2: Top 5 Merchants Leaderboard ---
+    const topMerchantsList = document.getElementById('topMerchantsList');
+    if (topMerchantsList) {
+      const merchantMap = {};
+      filteredList.forEach(item => {
+        const m = (item.title || 'Other').trim();
+        merchantMap[m] = (merchantMap[m] || 0) + item.amount;
+      });
+
+      const sortedMerchants = Object.entries(merchantMap)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5);
+
+      if (sortedMerchants.length === 0) {
+        topMerchantsList.innerHTML = `<div class="py-4 text-center text-xs text-slate-400">No merchant transactions in this period</div>`;
+      } else {
+        const highestAmt = sortedMerchants[0][1] || 1;
+        const totalFilterAmt = filteredList.reduce((s, e) => s + e.amount, 0) || 1;
+
+        topMerchantsList.innerHTML = sortedMerchants.map(([mName, mAmt], idx) => {
+          const rankColors = ['bg-amber-400 text-slate-950', 'bg-slate-300 text-slate-900', 'bg-amber-600 text-white', 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300', 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'];
+          const pctOfTotal = ((mAmt / totalFilterAmt) * 100).toFixed(1);
+          const barWidth = Math.min(100, Math.round((mAmt / highestAmt) * 100));
+
+          return `
+            <div class="space-y-1">
+              <div class="flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2 min-w-0">
+                  <span class="w-4 h-4 rounded-full ${rankColors[idx]} font-extrabold text-[10px] flex items-center justify-center shrink-0">
+                    ${idx + 1}
+                  </span>
+                  <span class="font-semibold text-slate-900 dark:text-white truncate max-w-[180px] sm:max-w-xs">${mName}</span>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                  <span class="text-[10px] text-slate-400">${pctOfTotal}%</span>
+                  <span class="font-bold mono text-slate-900 dark:text-white">${formatINR(mAmt)}</span>
+                </div>
+              </div>
+              <div class="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                <div class="bg-gradient-to-r from-emerald-500 to-teal-400 h-full rounded-full transition-all duration-500" style="width: ${barWidth}%;"></div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+
+    // --- Metric 1: Weekend vs Weekday Spend Ratio ---
+    const weekdayAmountEl = document.getElementById('weekdayAmount');
+    const weekendAmountEl = document.getElementById('weekendAmount');
+    const weekdayBar = document.getElementById('weekdayBar');
+    const weekendBar = document.getElementById('weekendBar');
+    const weekdayPctEl = document.getElementById('weekdayPct');
+    const weekendPctEl = document.getElementById('weekendPct');
+    const weekendInsightText = document.getElementById('weekendInsightText');
+
+    if (weekdayAmountEl && weekendAmountEl) {
+      let weekdaySum = 0;
+      let weekendSum = 0;
+
+      filteredList.forEach(item => {
+        if (!item.date) return;
+        const d = new Date(item.date);
+        const dayOfWeek = d.getDay(); // 0 is Sunday, 6 is Saturday
+        if (dayOfWeek === 0 || dayOfWeek === 6) {
+          weekendSum += item.amount;
+        } else {
+          weekdaySum += item.amount;
+        }
+      });
+
+      const totalWeekSum = weekdaySum + weekendSum;
+      const weekdayPct = totalWeekSum > 0 ? ((weekdaySum / totalWeekSum) * 100) : 50;
+      const weekendPct = totalWeekSum > 0 ? ((weekendSum / totalWeekSum) * 100) : 50;
+
+      weekdayAmountEl.textContent = formatINR(weekdaySum);
+      weekendAmountEl.textContent = formatINR(weekendSum);
+
+      if (weekdayBar) weekdayBar.style.width = `${weekdayPct.toFixed(1)}%`;
+      if (weekendBar) weekendBar.style.width = `${weekendPct.toFixed(1)}%`;
+
+      if (weekdayPctEl) weekdayPctEl.textContent = `${weekdayPct.toFixed(1)}% (${(weekdayPct > 0 ? '5 days/wk' : '')})`;
+      if (weekendPctEl) weekendPctEl.textContent = `${weekendPct.toFixed(1)}% (${(weekendPct > 0 ? '2 days/wk' : '')})`;
+
+      if (weekendInsightText) {
+        if (totalWeekSum === 0) {
+          weekendInsightText.textContent = 'No transaction data available yet.';
+        } else if (weekendPct >= 40) {
+          weekendInsightText.innerHTML = `⚠️ <strong class="text-pink-400 font-bold">${weekendPct.toFixed(0)}%</strong> of your expenses happen on just 2 weekend days! Consider setting weekend limits.`;
+        } else {
+          weekendInsightText.innerHTML = `✅ Healthy distribution! <strong class="text-indigo-400 font-bold">${weekdayPct.toFixed(0)}%</strong> of spending happens evenly across weekdays.`;
+        }
+      }
+    }
   }
 
   // --- Render Expense Table & Mobile Cards ---
@@ -720,6 +921,8 @@
   // --- Master View Refresh ---
   function refreshView() {
     renderMonthDropdown();
+    renderCategoryFilterPills();
+    populateCategoryDropdowns();
     const filtered = getFilteredExpenses();
     updateKPIs(filtered);
     updateCharts(filtered);
@@ -766,6 +969,50 @@
     expenseModal.classList.add('hidden');
   }
 
+  // --- Category UI Renderers ---
+  function populateCategoryDropdowns() {
+    if (!formCategory) return;
+    const currentVal = formCategory.value;
+    formCategory.innerHTML = Object.keys(CATEGORY_REGISTRY).map(cat => {
+      const icon = CATEGORY_ICONS[cat];
+      return `<option value="${cat}">${icon} ${cat}</option>`;
+    }).join('');
+    if (currentVal && CATEGORY_REGISTRY[currentVal]) {
+      formCategory.value = currentVal;
+    }
+  }
+
+  function renderCategoryFilterPills() {
+    if (!categoryFilterPills) return;
+    const catKeys = Object.keys(CATEGORY_REGISTRY);
+
+    let pillsHtml = `
+      <button data-cat="all" class="px-2.5 py-1 rounded-lg font-semibold ${selectedCategory === 'all' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'} transition shrink-0 active:scale-95">All</button>
+    `;
+
+    catKeys.forEach(cat => {
+      const isSel = selectedCategory === cat;
+      const icon = CATEGORY_ICONS[cat];
+      pillsHtml += `
+        <button data-cat="${cat}" class="px-2.5 py-1 rounded-lg ${isSel ? 'font-semibold bg-emerald-500 text-slate-950' : 'font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'} transition shrink-0">
+          ${icon} ${cat}
+        </button>
+      `;
+    });
+
+    // Add + Category Button
+    pillsHtml += `
+      <button id="openAddCategoryBtn" type="button" class="px-2.5 py-1 rounded-lg font-bold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 transition shrink-0 flex items-center gap-1 active:scale-95">
+        <span>+ Add Category</span>
+      </button>
+    `;
+
+    categoryFilterPills.innerHTML = pillsHtml;
+  }
+
+  // Pending Batch Update State
+  let pendingBatchUpdate = null;
+
   // Form Submit
   expenseForm.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -786,7 +1033,24 @@
       // Edit
       const index = expenses.findIndex(e => e.id === id);
       if (index !== -1) {
+        const oldExpense = expenses[index];
+        const categoryChanged = oldExpense.category !== category;
+
+        // Check if there are other transactions with same merchant/title with different category
+        const matchingOtherExpenses = categoryChanged 
+          ? expenses.filter(e => e.id !== id && e.title.toLowerCase().trim() === title.toLowerCase().trim() && e.category !== category)
+          : [];
+
         expenses[index] = { id, title, amount, category, paymentMode, date, notes };
+        saveData();
+        closeModal();
+        refreshView();
+
+        // If category changed and similar transactions exist, ask permission!
+        if (matchingOtherExpenses.length > 0) {
+          showBatchCategoryPrompt(title, category, matchingOtherExpenses);
+          return;
+        }
       }
     } else {
       // Create
@@ -800,12 +1064,102 @@
         notes
       };
       expenses.unshift(newExpense);
+      saveData();
+      closeModal();
+      refreshView();
     }
-
-    saveData();
-    closeModal();
-    refreshView();
   });
+
+  // Batch Category Update Modal Logic
+  const batchCategoryModal = document.getElementById('batchCategoryModal');
+  const batchMerchantName = document.getElementById('batchMerchantName');
+  const batchNewCategory = document.getElementById('batchNewCategory');
+  const batchMatchCount = document.getElementById('batchMatchCount');
+  const batchSkipBtn = document.getElementById('batchSkipBtn');
+  const batchConfirmBtn = document.getElementById('batchConfirmBtn');
+
+  function showBatchCategoryPrompt(merchantTitle, newCat, matches) {
+    if (!batchCategoryModal) return;
+    pendingBatchUpdate = { merchantTitle, newCat, matchIds: matches.map(m => m.id) };
+    if (batchMerchantName) batchMerchantName.textContent = merchantTitle;
+    if (batchNewCategory) batchNewCategory.textContent = `${CATEGORY_ICONS[newCat] || ''} ${newCat}`;
+    if (batchMatchCount) batchMatchCount.textContent = matches.length;
+    batchCategoryModal.classList.remove('hidden');
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function closeBatchCategoryModal() {
+    if (batchCategoryModal) batchCategoryModal.classList.add('hidden');
+    pendingBatchUpdate = null;
+  }
+
+  if (batchSkipBtn) batchSkipBtn.addEventListener('click', closeBatchCategoryModal);
+  if (batchConfirmBtn) {
+    batchConfirmBtn.addEventListener('click', () => {
+      if (pendingBatchUpdate && pendingBatchUpdate.matchIds) {
+        let updatedCount = 0;
+        expenses.forEach(e => {
+          if (pendingBatchUpdate.matchIds.includes(e.id)) {
+            e.category = pendingBatchUpdate.newCat;
+            updatedCount++;
+          }
+        });
+        saveData();
+        refreshView();
+        alert(`Success! Updated ${updatedCount} matching transactions for "${pendingBatchUpdate.merchantTitle}" to "${pendingBatchUpdate.newCat}".`);
+      }
+      closeBatchCategoryModal();
+    });
+  }
+
+  // Custom Category Modal Logic
+  const customCategoryModal = document.getElementById('customCategoryModal');
+  const customCategoryForm = document.getElementById('customCategoryForm');
+  const newCategoryNameInput = document.getElementById('newCategoryNameInput');
+  const newCategoryIconInput = document.getElementById('newCategoryIconInput');
+  const newCategoryColorInput = document.getElementById('newCategoryColorInput');
+  const closeCategoryModalBtn = document.getElementById('closeCategoryModalBtn');
+  const cancelCategoryModalBtn = document.getElementById('cancelCategoryModalBtn');
+
+  function openCategoryModal() {
+    if (customCategoryModal) {
+      customCategoryForm.reset();
+      newCategoryIconInput.value = '🏷️';
+      newCategoryColorInput.value = '#10b981';
+      customCategoryModal.classList.remove('hidden');
+      newCategoryNameInput.focus();
+    }
+  }
+
+  function closeCategoryModal() {
+    if (customCategoryModal) customCategoryModal.classList.add('hidden');
+  }
+
+  if (closeCategoryModalBtn) closeCategoryModalBtn.addEventListener('click', closeCategoryModal);
+  if (cancelCategoryModalBtn) cancelCategoryModalBtn.addEventListener('click', closeCategoryModal);
+
+  if (customCategoryForm) {
+    customCategoryForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const name = (newCategoryNameInput.value || '').trim();
+      const icon = (newCategoryIconInput.value || '').trim() || '🏷️';
+      const color = newCategoryColorInput.value || '#10b981';
+
+      if (!name) return;
+      if (CATEGORY_REGISTRY[name]) {
+        alert('A category with this name already exists!');
+        return;
+      }
+
+      CATEGORY_REGISTRY[name] = { color, icon };
+      saveCategories();
+      populateCategoryDropdowns();
+      renderCategoryFilterPills();
+      refreshView();
+      closeCategoryModal();
+      alert(`Category "${icon} ${name}" created successfully!`);
+    });
+  }
 
   // Quick Amount Buttons
   document.querySelectorAll('.quick-amt-btn').forEach(btn => {
@@ -951,18 +1305,18 @@
     applyTheme(true);
   }
 
-  // --- Category Filter Pills ---
+  // --- Category Filter Pills & Add Category Click ---
   categoryFilterPills.addEventListener('click', (e) => {
+    const addBtn = e.target.closest('#openAddCategoryBtn');
+    if (addBtn) {
+      openCategoryModal();
+      return;
+    }
+
     const btn = e.target.closest('button');
-    if (!btn) return;
+    if (!btn || !btn.dataset.cat) return;
     const cat = btn.dataset.cat;
     selectedCategory = cat;
-
-    // Active pill styles
-    categoryFilterPills.querySelectorAll('button').forEach(b => {
-      b.className = 'px-2.5 py-1 rounded-lg font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition shrink-0';
-    });
-    btn.className = 'px-2.5 py-1 rounded-lg font-semibold bg-emerald-500 text-slate-950 transition shrink-0 active:scale-95';
 
     refreshView();
   });
@@ -1007,31 +1361,31 @@
     const text = (narration || '').toLowerCase();
     
     // Food & Dining
-    if (/swiggy|zomato|mcdonald|kfc|domino|starbucks|pizza|burger|cafe|tea|coffee|restaurant|hotel|baker|dhaba|eats|biryani|subway/.test(text)) {
+    if (/swiggy|zomato|mcdonald|kfc|domino|starbucks|pizza|burger|cafe|tea|coffee|restaurant|hotel|baker|dhaba|eats|biryani|subway|iyankar|bakery|mess|hotel|canteen|food/.test(text)) {
       return 'Food & Dining';
     }
     // Groceries
-    if (/blinkit|zepto|instamart|bigbasket|supermarket|dmart|reliance fresh|spencer|provision|vegetable|fruit|dairy|milk|kirana|nilgiris/.test(text)) {
+    if (/blinkit|zepto|instamart|bigbasket|supermarket|dmart|reliance fresh|spencer|provision|vegetable|fruit|dairy|milk|kirana|nilgiris|hygrevar|store|market|grocer/.test(text)) {
       return 'Groceries';
     }
     // Travel & Fuel
-    if (/petrol|fuel|hpcl|bpcl|iocl|shell|uber|ola|rapido|irctc|railway|makemytrip|indigo|air india|fastag|toll|parking|metro|flight/.test(text)) {
+    if (/irctc|railway|train|ticket|petrol|fuel|hpcl|bpcl|iocl|shell|uber|ola|rapido|makemytrip|indigo|air india|fastag|toll|parking|metro|flight/.test(text)) {
       return 'Travel & Fuel';
     }
     // Bills & Utilities
-    if (/bescom|tneb|electricity|airtel|jio|vodafone|vi|broadband|wifi|water|gas|indane|bharat gas|billdesk|recharge|dth|tata play|lic|insurance|rent/.test(text)) {
+    if (/bescom|tneb|electricity|airtel|jio|vodafone|vi|broadband|wifi|water|gas|indane|bharat gas|billdesk|recharge|dth|tata play|lic|insurance|rent|interest/.test(text)) {
       return 'Bills & Utilities';
     }
     // Shopping
-    if (/amazon|flipkart|myntra|ajio|zara|h&m|decathlon|croma|reliance digital|meesho|nykaa|shoppers stop|lifestyle|westside|cloth|fashion/.test(text)) {
+    if (/rmkv|fabrics|textile|silks|clothing|apparel|amazon|flipkart|myntra|ajio|zara|h&m|decathlon|croma|reliance digital|meesho|nykaa|shoppers stop|lifestyle|westside|cloth|fashion/.test(text)) {
       return 'Shopping';
     }
     // Entertainment
-    if (/netflix|spotify|hotstar|prime|youtube|cinema|pvr|inox|bookmyshow|game|playstation|disney|ticket|movie/.test(text)) {
+    if (/netflix|spotify|hotstar|prime|youtube|cinema|pvr|inox|bookmyshow|game|playstation|disney|theatre/.test(text)) {
       return 'Entertainment';
     }
     // Health
-    if (/apollo|pharmacy|medplus|netmeds|1mg|hospital|clinic|doctor|lab|diagnostic|practo|dentist|healthcare/.test(text)) {
+    if (/apollo|pharmacy|medplus|netmeds|1mg|hospital|clinic|doctor|lab|diagnostic|practo|dentist|healthcare|medlife/.test(text)) {
       return 'Health';
     }
     return 'Others';
@@ -1059,11 +1413,30 @@
     if (!narration) return 'Expense';
     let s = narration.trim();
 
+    // Specific SBI UPI Formats:
+    // E.g. "UPI-IRCTC TICKETING-PINELABS.11093315@PINEAXIS-UTIB000SETU-..."
+    // E.g. "UPI-RMKV FABRICS PRIVATE-RMKVFABRICSPRIVATELT..."
+    // E.g. "UPI-HYGREVAR SUPER MARKE-PAYTMQR6BTVVW5@P..."
+    // E.g. "UPI-SRI LAKSHMI IYANKAR -LAKSHMIIYAN@TMB..."
+    // E.g. "UPI-VARADHARAJ-Q366713789@YBL..."
+    // E.g. "UPI-KARTHIKEYAN M-MURUGANKARTHIKEYAN8749@OKSBI..."
+
+    const sbiUpiPattern = /^UPI-([A-Za-z0-9\s&._-]+?)(?:-(?:[A-Za-z0-9._-]+@[A-Za-z0-9._-]+|[A-Za-z0-9]{10,}))/i;
+    const sbiMatch = s.match(sbiUpiPattern);
+    if (sbiMatch && sbiMatch[1]) {
+      let name = sbiMatch[1].trim();
+      if (name.length >= 3) {
+        return name.length > 30 ? name.substring(0, 30) : name;
+      }
+    }
+
     // Standard UPI clean: e.g. "UPI/428394839/SWIGGY/HDFC" or "UPI-ZOMATO-PAY"
-    const upiMatch = s.match(/UPI(?:\/|-)[^/]+(?:\/|-)([A-Za-z0-9\s&._-]+)/i);
+    const upiMatch = s.match(/UPI(?:\/|-)([A-Za-z0-9\s&._-]+?)(?:\/|-|@)/i);
     if (upiMatch && upiMatch[1]) {
-      let candidate = upiMatch[1].replace(/@[a-zA-Z0-9]+/, '').trim();
-      if (candidate.length > 2) return candidate;
+      let candidate = upiMatch[1].trim();
+      if (candidate.length > 2 && !/^\d+$/.test(candidate)) {
+        return candidate.length > 30 ? candidate.substring(0, 30) : candidate;
+      }
     }
 
     // POS e.g. "POS 4012XXXXXXXX1234 RELIANCE RETAIL"
@@ -1074,12 +1447,12 @@
 
     // Strip long reference numbers and bank codes
     s = s.replace(/[\d]{8,}/g, '')
-         .replace(/\b(REF|NO|TXN|UTRN|CMS|BIL|IMPS|NEFT|RTGS|NACH|ACH)\b/gi, '')
+         .replace(/\b(REF|NO|TXN|UTRN|CMS|BIL|IMPS|NEFT|RTGS|NACH|ACH|SEND MONEY|PAYMENTFORV1)\b/gi, '')
          .replace(/[\/\\|*_-]+/g, ' ')
          .replace(/\s+/g, ' ')
          .trim();
 
-    return s.length > 3 ? s.substring(0, 35) : narration.substring(0, 35);
+    return s.length > 3 ? (s.length > 32 ? s.substring(0, 32) : s) : narration.substring(0, 32);
   }
 
   // Parse Indian Date Formats (DD/MM/YYYY, DD-MM-YYYY, YYYY-MM-DD, DD-MMM-YY, etc.)
@@ -1266,20 +1639,319 @@
     confirmImportBtn.removeAttribute('disabled');
   }
 
-  // File Upload Handlers
-  function handleStatementFile(file) {
+  // Internal default fallback for SBI password-protected statements
+  const SBI_DEFAULT_PDF_PASSWORD = '67668231002';
+  const statementPasswordInput = document.getElementById('statementPasswordInput');
+  const togglePasswordVisibilityBtn = document.getElementById('togglePasswordVisibilityBtn');
+  const passwordEyeIcon = document.getElementById('passwordEyeIcon');
+
+  // Toggle show/hide password
+  if (togglePasswordVisibilityBtn && statementPasswordInput) {
+    togglePasswordVisibilityBtn.addEventListener('click', () => {
+      const isPass = statementPasswordInput.type === 'password';
+      statementPasswordInput.type = isPass ? 'text' : 'password';
+      if (passwordEyeIcon) {
+        passwordEyeIcon.setAttribute('data-lucide', isPass ? 'eye-off' : 'eye');
+        if (window.lucide) lucide.createIcons();
+      }
+    });
+  }
+
+  // --- Multi-Format File Upload Handler (PDF, Excel, CSV) ---
+  async function handleStatementFile(file) {
     if (!file) return;
-    
-    // Parse using PapaParse
+
+    const fileName = file.name.toLowerCase();
+    // Use manually entered password if provided, else use default fallback
+    const manualPass = statementPasswordInput ? statementPasswordInput.value.trim() : '';
+    const password = manualPass || SBI_DEFAULT_PDF_PASSWORD;
+
+    // 1. PDF Statement (e.g. SBI Password Protected PDF)
+    if (fileName.endsWith('.pdf')) {
+      await parsePdfBankStatement(file, password);
+      return;
+    }
+
+    // 2. Excel Statement (SBI .xlsx or .xls)
+    if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+      parseExcelBankStatement(file);
+      return;
+    }
+
+    // 3. CSV / Text Statement
+    parseCsvBankStatement(file);
+  }
+
+  // Parse CSV
+  function parseCsvBankStatement(file) {
     Papa.parse(file, {
       skipEmptyLines: true,
       complete: function(results) {
         processBankStatementRows(results.data);
       },
       error: function(err) {
-        alert('Error parsing CSV file: ' + err.message);
+        alert('Error parsing CSV statement: ' + err.message);
       }
     });
+  }
+
+  // Parse Excel (.xlsx / .xls) via SheetJS
+  function parseExcelBankStatement(file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+        processBankStatementRows(rows);
+      } catch (err) {
+        console.error('Excel parse error:', err);
+        alert('Failed to read Excel file. If it is password protected, please export as CSV/PDF or check file format.');
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  // Parse Password-Protected PDF (SBI Format) via PDF.js with Spatial Column Alignment
+  async function parsePdfBankStatement(file, password) {
+    if (!window.pdfjsLib) {
+      alert('PDF Parser engine is still loading. Please try again in a moment.');
+      return;
+    }
+
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const loadingTask = pdfjsLib.getDocument({
+        data: arrayBuffer,
+        password: password
+      });
+
+      loadingTask.onPassword = function(callback, reason) {
+        const pass = prompt('Enter Bank Statement PDF Password:', password || '');
+        if (pass) {
+          callback(pass);
+        } else {
+          callback('');
+        }
+      };
+
+      const pdf = await loadingTask.promise;
+      const parsedTransactions = [];
+      let detectedBankName = 'State Bank of India (SBI)';
+
+      // Process all pages
+      for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+        const page = await pdf.getPage(pageNum);
+        const textContent = await page.getTextContent();
+        const items = textContent.items;
+        if (!items || items.length === 0) continue;
+
+        // Group text items by Y position (line grouping with 4px tolerance)
+        const lineMap = new Map();
+        items.forEach(item => {
+          if (!item.str || item.str.trim() === '') return;
+          const y = Math.round(item.transform[5]);
+          let matchedY = null;
+          for (const key of lineMap.keys()) {
+            if (Math.abs(key - y) <= 4) {
+              matchedY = key;
+              break;
+            }
+          }
+          if (matchedY === null) {
+            matchedY = y;
+            lineMap.set(matchedY, []);
+          }
+          lineMap.get(matchedY).push({
+            str: item.str.trim(),
+            x: Math.round(item.transform[4]),
+            w: Math.round(item.width)
+          });
+        });
+
+        // Sort lines top to bottom (descending Y)
+        const sortedYKeys = Array.from(lineMap.keys()).sort((a, b) => b - a);
+
+        // Analyze spatial layout or column bounds on the page
+        // Standard SBI Table Columns:
+        // [Date ~30-70] [Narration ~70-280] [RefNo ~280-350] [Value Date ~350-400] [Withdrawal ~400-480] [Deposit ~480-550] [Closing Balance ~550-620]
+        
+        let currentTxn = null;
+
+        for (const y of sortedYKeys) {
+          const lineItems = lineMap.get(y).sort((a, b) => a.x - b.x);
+          const fullLineText = lineItems.map(it => it.str).join(' ');
+
+          // Check if this line starts a new transaction row with a date: DD/MM/YY or DD/MM/YYYY
+          // SBI Date format is typically DD/MM/YY or DD/MM/YYYY at the beginning of the line
+          const firstItem = lineItems[0];
+          const dateMatch = firstItem ? firstItem.str.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})$/) : null;
+
+          if (dateMatch && firstItem.x < 100) {
+            // If we have an existing accumulated transaction, push it
+            if (currentTxn && currentTxn.amount > 0) {
+              parsedTransactions.push(currentTxn);
+            }
+
+            const rawDate = firstItem.str;
+            let narrationParts = [];
+            let withdrawalStr = '';
+            let depositStr = '';
+            let balanceStr = '';
+
+            // Categorize other items on the same line based on X position
+            for (let i = 1; i < lineItems.length; i++) {
+              const it = lineItems[i];
+              // Check if item is a number (e.g. 40.00, 3,800.00, 10,496.21)
+              const isNumeric = /^[\d,]+(?:\.\d{1,2})?$/.test(it.str.replace(/[^\d.,]/g, ''));
+
+              if (it.x < 270) {
+                // Narration column
+                narrationParts.push(it.str);
+              } else if (it.x >= 270 && it.x < 360) {
+                // Cheque / Ref No. column -> ignore or store in notes
+              } else if (it.x >= 360 && it.x < 420) {
+                // Value Date column -> ignore
+              } else if (it.x >= 420 && it.x < 500) {
+                // Withdrawal column! (Debited amount)
+                if (isNumeric) withdrawalStr = it.str;
+              } else if (it.x >= 500 && it.x < 570) {
+                // Deposit column (Credits)
+                if (isNumeric) depositStr = it.str;
+              } else if (it.x >= 570) {
+                // Closing Balance
+                if (isNumeric) balanceStr = it.str;
+              } else {
+                narrationParts.push(it.str);
+              }
+            }
+
+            // Fallback column parsing if X positions shifted (e.g. 6 items: [Date, Narration, Ref, ValDt, Withdrawal, Balance])
+            if (!withdrawalStr && !depositStr) {
+              // Extract numeric items at the end of the line
+              const numbersInLine = lineItems.filter(it => /^[\d,]+\.\d{2}$/.test(it.str));
+              if (numbersInLine.length === 2) {
+                // If 2 numbers, first is usually Withdrawal or Deposit, second is Balance!
+                const firstNum = numbersInLine[0];
+                const lastNum = numbersInLine[1];
+                // Check X position of firstNum to see if it's Withdrawal (<510) or Deposit
+                if (firstNum.x < 515) {
+                  withdrawalStr = firstNum.str;
+                } else {
+                  depositStr = firstNum.str;
+                }
+              } else if (numbersInLine.length === 1 && lineItems.length >= 4) {
+                // Only balance present -> no withdrawal on this row
+              }
+            }
+
+            const debitAmt = parseAmount(withdrawalStr);
+
+            currentTxn = {
+              date: parseBankDate(rawDate),
+              narration: narrationParts.join(' ').trim(),
+              amount: debitAmt,
+              isDebit: debitAmt > 0 && !depositStr
+            };
+
+          } else if (currentTxn) {
+            // Continuation of multi-line narration from previous row!
+            // Ignore headers, footers, summary lines, and summary blocks
+            const isSummaryLine = /statement summary|closing balance|page no|from\s*:|to\s*:|branch\s*:|total\s*:|carried forward/i.test(fullLineText);
+            
+            if (!isSummaryLine) {
+              // Add text to narration if on left side
+              const textOnly = lineItems.filter(it => it.x < 360).map(it => it.str).join(' ');
+              if (textOnly) {
+                currentTxn.narration += ' ' + textOnly;
+              }
+            }
+          }
+        }
+
+        // Flush last txn of the page
+        if (currentTxn && currentTxn.amount > 0) {
+          parsedTransactions.push(currentTxn);
+          currentTxn = null;
+        }
+      }
+
+      // Convert extracted structured transactions to dashboard expense format
+      if (parsedTransactions.length > 0) {
+        let totalDebitSum = 0;
+        const formattedExpenses = parsedTransactions
+          .filter(t => {
+            if (t.amount <= 0 || !t.isDebit) return false;
+            // Explicitly exclude non-expense entries (Interest credited by bank, statement summary rows, refunds)
+            const narrLower = (t.narration || '').toLowerCase();
+            if (narrLower.includes('interest paid') || 
+                narrLower.includes('interest credit') || 
+                narrLower.includes('statement summary') ||
+                narrLower.includes('closing balance')) {
+              return false; // Skip bank interest credits and summaries
+            }
+            return true;
+          })
+          .map((t, idx) => {
+            const cleanTitle = cleanMerchantTitle(t.narration);
+            const category = categorizeTransaction(t.narration);
+            const paymentMode = detectPaymentMode(t.narration);
+            totalDebitSum += t.amount;
+
+            return {
+              id: 'stmt_sbi_' + Date.now() + '_' + idx,
+              title: cleanTitle,
+              amount: t.amount,
+              category: category,
+              paymentMode: paymentMode,
+              date: t.date,
+              notes: t.narration.substring(0, 150)
+            };
+          });
+
+        if (formattedExpenses.length > 0) {
+          parsedExpensesToImport = formattedExpenses;
+          detectedBankTag.textContent = detectedBankName;
+          importStatusText.textContent = `Successfully extracted ${formattedExpenses.length} SBI debit transactions`;
+          parsedDebitCount.textContent = formattedExpenses.length;
+          parsedTotalAmount.textContent = `Total: ${formatINR(totalDebitSum)}`;
+
+          importPreviewTableBody.innerHTML = formattedExpenses.slice(0, 50).map(item => `
+            <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40">
+              <td class="py-1.5 px-3 whitespace-nowrap text-slate-500">${formatDate(item.date)}</td>
+              <td class="py-1.5 px-3 truncate max-w-xs text-slate-900 dark:text-white font-semibold">
+                ${item.title}
+                <div class="text-[10px] text-slate-400 truncate">${item.notes}</div>
+              </td>
+              <td class="py-1.5 px-3 whitespace-nowrap">
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold" style="background-color: ${CATEGORY_COLORS[item.category]}20; color: ${CATEGORY_COLORS[item.category]};">
+                  ${CATEGORY_ICONS[item.category]} ${item.category}
+                </span>
+              </td>
+              <td class="py-1.5 px-3 text-right mono font-bold text-rose-500 whitespace-nowrap">${formatINR(item.amount)}</td>
+            </tr>
+          `).join('');
+
+          importStatusBanner.classList.remove('hidden');
+          importPreviewContainer.classList.remove('hidden');
+          confirmImportBtn.removeAttribute('disabled');
+          return;
+        }
+      }
+
+      // Fallback: If structured parser didn't match, try standard row extractor
+      alert('Could not detect debit transactions in this PDF. Please check if the file is an SBI Account Statement with Withdrawal column.');
+
+    } catch (err) {
+      console.error('PDF parsing error:', err);
+      if (err.name === 'PasswordException') {
+        alert('Incorrect PDF password! Please enter the correct password in the box above.');
+      } else {
+        alert('Could not unlock or extract PDF: ' + err.message);
+      }
+    }
   }
 
   // Modal Open/Close
@@ -1352,16 +2024,338 @@
     alert(`Successfully imported ${addedCount} expenses from your bank statement! (${parsedExpensesToImport.length - addedCount} duplicates skipped)`);
   });
 
+  // --- Live SMS Auto-Sync (Firebase Realtime Database & MacroDroid) ---
+  const STORAGE_KEY_SYNC_CONFIG = 'finlytics_sync_config_v1';
+  const syncModal = document.getElementById('syncModal');
+  const openSyncModalOption = document.getElementById('openSyncModalOption');
+  const closeSyncModalBtn = document.getElementById('closeSyncModalBtn');
+  const cancelSyncBtn = document.getElementById('cancelSyncBtn');
+  const saveSyncConfigBtn = document.getElementById('saveSyncConfigBtn');
+  const firebaseDbUrlInput = document.getElementById('firebaseDbUrlInput');
+  const firebaseSyncTokenInput = document.getElementById('firebaseSyncTokenInput');
+  const syncStatusDot = document.getElementById('syncStatusDot');
+  const syncStatusText = document.getElementById('syncStatusText');
+  const syncDeviceTag = document.getElementById('syncDeviceTag');
+  const macroDroidUrlDisplay = document.getElementById('macroDroidUrlDisplay');
+  const testSmsInput = document.getElementById('testSmsInput');
+  const testSmsParseBtn = document.getElementById('testSmsParseBtn');
+
+  let firebaseDbInstance = null;
+  let firebaseListenerRef = null;
+
+  function loadSyncConfig() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY_SYNC_CONFIG);
+      if (raw) return JSON.parse(raw);
+    } catch (e) {
+      console.warn('Failed to parse sync config', e);
+    }
+    return { dbUrl: '', token: '' };
+  }
+
+  function saveSyncConfig(cfg) {
+    localStorage.setItem(STORAGE_KEY_SYNC_CONFIG, JSON.stringify(cfg));
+  }
+
+  function updateMacroDroidDisplay(dbUrl, token) {
+    if (!macroDroidUrlDisplay) return;
+    if (dbUrl && token) {
+      const cleanUrl = dbUrl.replace(/\/+$/, '');
+      const webhookUrl = `${cleanUrl}/incoming_sms.json?auth=${encodeURIComponent(token)}`;
+      macroDroidUrlDisplay.innerHTML = `<strong>URL:</strong> <span class="text-white">${webhookUrl}</span><br><strong>Method:</strong> POST<br><strong>Content Type:</strong> application/json<br><strong>Body:</strong> {"sms": "{sms_body}", "sender": "{sms_number}", "time": "{system_time}"}`;
+    } else {
+      macroDroidUrlDisplay.textContent = 'Configure Firebase DB URL & Token above to generate phone webhook URL';
+    }
+  }
+
+  // Smart Bank SMS Parser (Strictly SBI Bank Filter)
+  function parseBankSmsText(smsText, sender) {
+    if (!smsText || typeof smsText !== 'string') return null;
+    const clean = smsText.replace(/[\r\n]+/g, ' ').trim();
+    const cleanLower = clean.toLowerCase();
+    const senderLower = (sender || '').toLowerCase();
+
+    // STRICT SBI FILTER: User specifically requested only SBI SMS to be captured among 3 banks
+    // Check if sender or message text belongs to SBI
+    const isSbiSender = /sbi|sbin|sbiinb|sbipsg|sbicrd/i.test(senderLower);
+    const hasSbiKeyword = /\bsbi\b|state bank of india|sbiinb|\batinb\b|sbicard/i.test(cleanLower);
+    
+    // If sender is specified and not SBI, or if neither sender nor content indicates SBI, ignore!
+    if (!isSbiSender && !hasSbiKeyword) {
+      console.log('Skipping SMS: Not from SBI Bank (Filtered out for multi-bank protection).');
+      return null;
+    }
+
+    // 1. Amount matching (Rs., INR, Rs, ₹)
+    const amountMatch = clean.match(/(?:(?:Rs\.?|INR|₹)\s*([\d,]+(?:\.\d{1,2})?)|(?:debited|spent|paid)\s*(?:by|for|of)?\s*(?:Rs\.?|INR|₹)?\s*([\d,]+(?:\.\d{1,2})?))/i);
+    let amount = 0;
+    if (amountMatch) {
+      const rawAmt = amountMatch[1] || amountMatch[2];
+      if (rawAmt) {
+        amount = parseFloat(rawAmt.replace(/,/g, ''));
+      }
+    }
+
+    if (!amount || isNaN(amount) || amount <= 0) {
+      return null; // Not an expense or debit SMS
+    }
+
+    // 2. Debit check (must be debit / spend / transfer / withdrawn)
+    const isDebit = /debit|debited|spent|paid|withdrawn|purchase|transferred|sent/i.test(clean);
+    const isCredit = /credited|received|refund/i.test(clean);
+    if (!isDebit && isCredit) {
+      return null; // Ignore credits/deposits
+    }
+
+    // 3. Merchant / Recipient extraction
+    let merchant = 'Bank Transaction';
+    const merchantMatch = clean.match(/(?:to|at|vpa|info|transfer to|paid to)\s+([A-Za-z0-9\.\s@_-]{2,30}?)(?=\s+(?:on|ref|upi|avl|bal|avail|via|\.|\,|$))/i);
+    if (merchantMatch && merchantMatch[1]) {
+      merchant = merchantMatch[1].trim();
+    } else {
+      // Fallback: check if UPI transfer
+      const upiMatch = clean.match(/UPI\/[A-Za-z0-9]+\/([A-Za-z0-9\s]+)/i);
+      if (upiMatch && upiMatch[1]) {
+        merchant = upiMatch[1].trim();
+      }
+    }
+    // Clean up merchant name
+    merchant = merchant.replace(/^(vpa|info|transfer|ref)\s+/i, '').trim();
+    if (merchant.length > 25) merchant = merchant.substring(0, 25);
+    if (!merchant) merchant = 'SBI Bank Expense';
+
+    // 4. Category Prediction
+    const lowerSms = clean.toLowerCase();
+    let category = 'Others';
+    if (/swiggy|zomato|kfc|mcdonald|domino|starbucks|restaurant|cafe|hotel|food|biryani|tea/i.test(lowerSms)) {
+      category = 'Food & Dining';
+    } else if (/blinkit|zepto|instamart|bigbasket|supermarket|dmart|grocery|vegetable|milk|store|ration/i.test(lowerSms)) {
+      category = 'Groceries';
+    } else if (/petrol|fuel|hpcl|bpcl|iocl|shell|uber|ola|rapido|irctc|metro|toll|fastag|flight|railway/i.test(lowerSms)) {
+      category = 'Travel & Fuel';
+    } else if (/bescom|tneb|electricity|bill|recharge|jio|airtel|vi|broadband|wifi|gas|water|lic|insurance|emi/i.test(lowerSms)) {
+      category = 'Bills & Utilities';
+    } else if (/amazon|flipkart|myntra|ajio|meesho|nykaa|zara|h&m|retail|clothing|mall|shopping/i.test(lowerSms)) {
+      category = 'Shopping';
+    } else if (/bookmyshow|pvr|inox|netflix|prime|hotstar|spotify|cinema|theatre|game/i.test(lowerSms)) {
+      category = 'Entertainment';
+    } else if (/pharmacy|apollo|medplus|netmeds|1mg|hospital|clinic|doctor|lab|diagnostics/i.test(lowerSms)) {
+      category = 'Health';
+    }
+
+    // 5. Payment Mode
+    let paymentMode = 'UPI';
+    if (/credit\s*card/i.test(lowerSms)) {
+      paymentMode = 'Credit Card';
+    } else if (/debit\s*card|atm|pos/i.test(lowerSms)) {
+      paymentMode = 'Debit Card';
+    } else if (/netbanking|inb|neft|rtgs|imps/i.test(lowerSms)) {
+      paymentMode = 'NetBanking';
+    }
+
+    // 6. Date extraction (or today)
+    let expenseDate = new Date().toISOString().split('T')[0];
+    const dateMatch = clean.match(/(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{2,4})/);
+    if (dateMatch) {
+      const p1 = parseInt(dateMatch[1], 10);
+      const p2 = parseInt(dateMatch[2], 10);
+      let year = parseInt(dateMatch[3], 10);
+      if (year < 100) year += 2000;
+      // Usually DD-MM-YYYY in India
+      const day = p1 <= 31 ? p1 : p2;
+      const month = p1 <= 31 ? p2 : p1;
+      if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+        expenseDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      }
+    }
+
+    return {
+      id: 'sms_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+      title: merchant,
+      amount: amount,
+      category: category,
+      paymentMode: paymentMode,
+      date: expenseDate,
+      notes: `Auto-synced from SMS: "${clean.length > 60 ? clean.substring(0, 57) + '...' : clean}"`
+    };
+  }
+
+  function initFirebaseSync() {
+    const cfg = loadSyncConfig();
+    if (firebaseDbUrlInput) firebaseDbUrlInput.value = cfg.dbUrl || '';
+    if (firebaseSyncTokenInput) firebaseSyncTokenInput.value = cfg.token || '';
+    updateMacroDroidDisplay(cfg.dbUrl, cfg.token);
+
+    if (!cfg.dbUrl) {
+      if (syncStatusDot) syncStatusDot.className = 'w-2.5 h-2.5 rounded-full bg-slate-400';
+      if (syncStatusText) syncStatusText.textContent = 'Sync: Offline / Not Configured';
+      if (syncDeviceTag) syncDeviceTag.textContent = 'Local Only';
+      return;
+    }
+
+    try {
+      if (typeof firebase === 'undefined') {
+        console.warn('Firebase SDK not loaded');
+        return;
+      }
+
+      // Initialize Firebase App if not already initialized
+      if (!firebase.apps.length) {
+        firebase.initializeApp({
+          databaseURL: cfg.dbUrl
+        });
+      }
+
+      firebaseDbInstance = firebase.database();
+      if (syncStatusDot) syncStatusDot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse';
+      if (syncStatusText) syncStatusText.textContent = 'Sync: Live & Listening for Bank SMS';
+      if (syncDeviceTag) syncDeviceTag.textContent = 'Google Cloud Active';
+
+      // Detach existing listener if any
+      if (firebaseListenerRef) {
+        firebaseListenerRef.off();
+      }
+
+      // Listen for incoming SMS posted by phone
+      firebaseListenerRef = firebaseDbInstance.ref('incoming_sms');
+
+      firebaseListenerRef.limitToLast(5).on('child_added', (snapshot) => {
+        const val = snapshot.val();
+        if (!val) return;
+
+        // Support string or object format
+        const smsContent = typeof val === 'string' ? val : (val.sms || val.text || val.message || '');
+        const smsSender = typeof val === 'object' ? (val.sender || val.from || '') : '';
+        if (!smsContent) return;
+
+        // Parse SMS content with Strict SBI filter
+        const parsed = parseBankSmsText(smsContent, smsSender);
+        if (parsed) {
+          // Check for duplicate in recent expenses
+          const exists = expenses.some(e => 
+            e.date === parsed.date && 
+            Math.abs(e.amount - parsed.amount) < 0.01 && 
+            e.title === parsed.title
+          );
+
+          if (!exists) {
+            expenses.unshift(parsed);
+            saveData();
+            refreshView();
+            console.log('⚡ Finlytics Live SMS Auto-Logged:', parsed);
+          }
+        }
+      });
+
+    } catch (err) {
+      console.error('Firebase sync error:', err);
+      if (syncStatusDot) syncStatusDot.className = 'w-2.5 h-2.5 rounded-full bg-rose-500';
+      if (syncStatusText) syncStatusText.textContent = 'Sync Error: Check URL or Network';
+    }
+  }
+
+  // Sync Modal UI Handlers
+  function openSyncModal() {
+    moreMenuDropdown.classList.add('hidden');
+    syncModal.classList.remove('hidden');
+    const cfg = loadSyncConfig();
+    updateMacroDroidDisplay(cfg.dbUrl, cfg.token);
+  }
+
+  function closeSyncModal() {
+    syncModal.classList.add('hidden');
+  }
+
+  if (openSyncModalOption) openSyncModalOption.addEventListener('click', openSyncModal);
+  if (closeSyncModalBtn) closeSyncModalBtn.addEventListener('click', closeSyncModal);
+  if (cancelSyncBtn) cancelSyncBtn.addEventListener('click', closeSyncModal);
+
+  if (saveSyncConfigBtn) {
+    saveSyncConfigBtn.addEventListener('click', () => {
+      const dbUrl = (firebaseDbUrlInput.value || '').trim();
+      const token = (firebaseSyncTokenInput.value || '').trim();
+
+      saveSyncConfig({ dbUrl, token });
+      updateMacroDroidDisplay(dbUrl, token);
+      initFirebaseSync();
+      closeSyncModal();
+      alert('Google Firebase Live SMS Sync settings saved successfully!');
+    });
+  }
+
+  if (testSmsParseBtn && testSmsInput) {
+    testSmsParseBtn.addEventListener('click', () => {
+      const smsText = testSmsInput.value.trim();
+      if (!smsText) {
+        alert('Please paste a bank SMS first to test parsing!');
+        return;
+      }
+
+      const parsed = parseBankSmsText(smsText);
+      if (!parsed) {
+        alert('Could not detect a debit expense in the pasted SMS. Ensure it contains an amount (e.g. Rs 450) and debit keyword.');
+        return;
+      }
+
+      // Add to expenses
+      expenses.unshift(parsed);
+      saveData();
+      refreshView();
+      closeSyncModal();
+      alert(`Success! Auto-logged expense:\n• Title: ${parsed.title}\n• Amount: ₹${parsed.amount.toFixed(2)}\n• Category: ${parsed.category}\n• Mode: ${parsed.paymentMode}\n• Date: ${parsed.date}`);
+    });
+  }
+
   // Close modals on Esc key
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       closeModal();
       closeBudgetModal();
       closeImportModal();
+      if (syncModal) closeSyncModal();
       monthDropdownMenu.classList.add('hidden');
       moreMenuDropdown.classList.add('hidden');
     }
   });
+
+  // --- Mobile Bottom Navigation Listeners ---
+  const mobileNavHomeBtn = document.getElementById('mobileNavHomeBtn');
+  const mobileNavImportBtn = document.getElementById('mobileNavImportBtn');
+  const mobileNavAddBtn = document.getElementById('mobileNavAddBtn');
+  const mobileNavSyncBtn = document.getElementById('mobileNavSyncBtn');
+  const mobileNavBudgetBtn = document.getElementById('mobileNavBudgetBtn');
+
+  if (mobileNavHomeBtn) {
+    mobileNavHomeBtn.addEventListener('click', () => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  }
+  if (mobileNavImportBtn) {
+    mobileNavImportBtn.addEventListener('click', openImportModal);
+  }
+  if (mobileNavAddBtn) {
+    mobileNavAddBtn.addEventListener('click', openModal);
+  }
+  if (mobileNavSyncBtn) {
+    mobileNavSyncBtn.addEventListener('click', openSyncModal);
+  }
+  if (mobileNavBudgetBtn) {
+    mobileNavBudgetBtn.addEventListener('click', openBudgetModal);
+  }
+
+  // Clear All Data
+  const clearAllDataOption = document.getElementById('clearAllDataOption');
+  if (clearAllDataOption) {
+    clearAllDataOption.addEventListener('click', () => {
+      moreMenuDropdown.classList.add('hidden');
+      if (confirm('Are you sure you want to clear all current expenses? You can re-import your bank statement fresh!')) {
+        expenses = [];
+        saveData();
+        refreshView();
+        alert('All expenses have been cleared! You can now import your statement fresh.');
+      }
+    });
+  }
 
   // --- PWA Installation & Service Worker ---
   if ('serviceWorker' in navigator) {
@@ -1391,5 +2385,6 @@
   // --- App Bootstrap ---
   loadData();
   refreshView();
+  initFirebaseSync();
 
 })();

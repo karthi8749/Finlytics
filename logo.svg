@@ -1,58 +1,117 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
   <defs>
-    <!-- Background Radial Gradient -->
-    <radialGradient id="bgGrad" cx="50%" cy="30%" r="70%">
-      <stop offset="0%" stop-color="#162235" />
-      <stop offset="100%" stop-color="#0b0f17" />
+    <!-- Background Gradient -->
+    <radialGradient id="hubBg" cx="50%" cy="40%" r="75%">
+      <stop offset="0%" stop-color="#142338" />
+      <stop offset="60%" stop-color="#0b1019" />
+      <stop offset="100%" stop-color="#06090f" />
     </radialGradient>
-    
-    <!-- Emerald Gradient for Wallet/Rays -->
+
+    <!-- Warm Ochre / Orange Gradient Matching User's Image (R=217, G=119, B=46) -->
+    <linearGradient id="userOrangeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f59e0b" />
+      <stop offset="40%" stop-color="#ea580c" />
+      <stop offset="100%" stop-color="#c2410c" />
+    </linearGradient>
+
+    <!-- Outer Coin Ring Dual Gradient -->
+    <linearGradient id="ringOrange" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fb923c" />
+      <stop offset="50%" stop-color="#ea580c" />
+      <stop offset="100%" stop-color="#9a3412" />
+    </linearGradient>
+
+    <!-- Emerald Category Accent -->
     <linearGradient id="emeraldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#34d399" />
-      <stop offset="50%" stop-color="#10b981" />
       <stop offset="100%" stop-color="#059669" />
     </linearGradient>
 
-    <!-- Indigo Gradient for Charts -->
-    <linearGradient id="chartGrad" x1="0%" y1="100%" x2="0%" y2="0%">
-      <stop offset="0%" stop-color="#4f46e5" />
-      <stop offset="100%" stop-color="#818cf8" />
-    </linearGradient>
-
-    <!-- Coin Glow -->
-    <linearGradient id="coinGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#fbbf24" />
-      <stop offset="100%" stop-color="#f59e0b" />
-    </linearGradient>
-
-    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="12" result="blur" />
+    <filter id="hubGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
       <feComposite in="SourceGraphic" in2="blur" operator="over" />
     </filter>
   </defs>
 
-  <!-- Dark Background Rounded Squircle -->
-  <rect width="512" height="512" rx="112" fill="url(#bgGrad)" />
-  
-  <!-- Subtle circular accent halo -->
-  <circle cx="256" cy="240" r="160" fill="#10b981" opacity="0.08" filter="url(#glow)" />
+  <!-- Dark Rounded Squircle App Icon Base -->
+  <rect width="512" height="512" rx="116" fill="url(#hubBg)" />
 
-  <!-- Analytics Rising Bars (Behind Coin) -->
-  <rect x="130" y="270" width="36" height="90" rx="10" fill="url(#chartGrad)" opacity="0.6" />
-  <rect x="180" y="220" width="36" height="140" rx="10" fill="url(#chartGrad)" opacity="0.8" />
-  <rect x="230" y="170" width="36" height="190" rx="10" fill="url(#emeraldGrad)" />
-  <rect x="280" y="240" width="36" height="120" rx="10" fill="url(#chartGrad)" opacity="0.8" />
-  <rect x="330" y="200" width="36" height="160" rx="10" fill="url(#emeraldGrad)" />
+  <!-- Outer Dotted Orbit Track -->
+  <circle cx="256" cy="275" r="172" stroke="#334155" stroke-width="2.5" stroke-dasharray="6 6" fill="none" opacity="0.6" />
 
-  <!-- Center INR Currency Coin -->
-  <circle cx="256" cy="240" r="105" fill="#0b0f17" stroke="url(#emeraldGrad)" stroke-width="12" />
-  
-  <!-- INR Symbol (₹) Vector Path -->
-  <!-- Top Horizontal Bar -->
-  <rect x="206" y="176" width="100" height="15" rx="7.5" fill="url(#emeraldGrad)" />
-  <!-- Second Horizontal Bar -->
-  <rect x="206" y="208" width="86" height="15" rx="7.5" fill="url(#emeraldGrad)" />
-  <!-- Stem & Curve of R -->
-  <path d="M 230,176 L 230,304 M 230,191 C 275,191 292,204 292,236 C 292,268 268,272 230,272 M 245,268 L 285,304" 
-        stroke="url(#emeraldGrad)" stroke-width="15" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+  <!-- Connecting Radial Spokes -->
+  <line x1="256" y1="168" x2="256" y2="100" stroke="#ea580c" stroke-width="3" stroke-linecap="round" />
+  <line x1="185" y1="205" x2="135" y2="155" stroke="#f97316" stroke-width="3" stroke-linecap="round" />
+  <line x1="150" y1="275" x2="95" y2="275" stroke="#10b981" stroke-width="3" stroke-linecap="round" />
+  <line x1="185" y1="345" x2="135" y2="395" stroke="#3b82f6" stroke-width="3" stroke-linecap="round" />
+  <line x1="327" y1="205" x2="377" y2="155" stroke="#ec4899" stroke-width="3" stroke-linecap="round" />
+  <line x1="362" y1="275" x2="417" y2="275" stroke="#8b5cf6" stroke-width="3" stroke-linecap="round" />
+  <line x1="327" y1="345" x2="377" y2="395" stroke="#eab308" stroke-width="3" stroke-linecap="round" />
+
+  <!-- Satellite Nodes (Surrounding Categories) -->
+  <!-- Top Node: ₹ Currency / Income -->
+  <circle cx="256" cy="85" r="32" fill="#0f172a" stroke="#ea580c" stroke-width="3" />
+  <text x="256" y="93" font-family="'Plus Jakarta Sans', sans-serif" font-weight="bold" font-size="22" fill="#ea580c" text-anchor="middle">₹</text>
+
+  <!-- Top-Left: Food 🍔 -->
+  <circle cx="125" cy="145" r="30" fill="#0f172a" stroke="#f97316" stroke-width="3" />
+  <path d="M 113,142 C 113,133 137,133 137,142 Z" fill="#f97316" />
+  <rect x="111" y="145" width="28" height="3" rx="1.5" fill="#eab308" />
+  <rect x="113" y="150" width="24" height="4" rx="2" fill="#f97316" />
+
+  <!-- Mid-Left: Dining 🍴 -->
+  <circle cx="85" cy="275" r="30" fill="#0f172a" stroke="#10b981" stroke-width="3" />
+  <path d="M 78,266 L 78,284 M 75,266 L 75,274 C 75,276 81,276 81,274 L 81,266" stroke="#10b981" stroke-width="2" stroke-linecap="round" fill="none" />
+  <path d="M 91,266 C 89,268 89,274 89,276 L 89,284 M 91,266 L 91,276" stroke="#10b981" stroke-width="2" stroke-linecap="round" fill="none" />
+
+  <!-- Bottom-Left: Travel / Cards 🚗💳 -->
+  <circle cx="125" cy="405" r="30" fill="#0f172a" stroke="#3b82f6" stroke-width="3" />
+  <rect x="113" y="396" width="24" height="17" rx="3" fill="none" stroke="#3b82f6" stroke-width="2" />
+  <line x1="113" y1="401" x2="137" y2="401" stroke="#3b82f6" stroke-width="2" />
+  <rect x="116" y="407" width="5" height="3" rx="1" fill="#60a5fa" />
+
+  <!-- Top-Right: Shopping 🛍️ -->
+  <circle cx="387" cy="145" r="30" fill="#0f172a" stroke="#ec4899" stroke-width="3" />
+  <rect x="376" y="140" width="22" height="17" rx="3" fill="none" stroke="#ec4899" stroke-width="2" />
+  <path d="M 382,140 C 382,135 392,135 392,140" stroke="#ec4899" stroke-width="2" fill="none" />
+
+  <!-- Mid-Right: Deals / Bills 🏷️ -->
+  <circle cx="427" cy="275" r="30" fill="#0f172a" stroke="#8b5cf6" stroke-width="3" />
+  <rect x="416" y="267" width="22" height="15" rx="2.5" fill="none" stroke="#8b5cf6" stroke-width="2" />
+  <circle cx="427" cy="274.5" r="3" stroke="#8b5cf6" stroke-width="1.5" fill="none" />
+
+  <!-- Bottom-Right: Statement / Utilities 📄⚡ -->
+  <circle cx="387" cy="405" r="30" fill="#0f172a" stroke="#eab308" stroke-width="3" />
+  <path d="M 377,396 L 392,396 L 397,401 L 397,414 L 377,414 Z" fill="none" stroke="#eab308" stroke-width="2" />
+  <line x1="381" y1="403" x2="393" y2="403" stroke="#eab308" stroke-width="2" />
+  <line x1="381" y1="408" x2="391" y2="408" stroke="#eab308" stroke-width="2" />
+
+  <!-- ================= CENTRAL COIN (COMPLETE FULL CIRCLE) ================= -->
+  <!-- Outer Double Rings matching the orange user reference -->
+  <circle cx="256" cy="275" r="114" stroke="url(#ringOrange)" stroke-width="6" fill="#0b1320" filter="url(#hubGlow)" />
+  <circle cx="256" cy="275" r="104" stroke="#ea580c" stroke-width="3" fill="#ffffff" />
+
+  <!-- ================= EXACT SOLID-FILLED INDIAN RUPEE (₹) FROM USER IMAGE ================= -->
+  <!-- Top Flat Horizontal Head Bar -->
+  <polygon points="186,212 326,212 316,232 186,232" fill="url(#userOrangeGrad)" />
+
+  <!-- Middle Horizontal Bar -->
+  <polygon points="186,252 322,252 312,272 186,272" fill="url(#userOrangeGrad)" />
+
+  <!-- Central Upper R-Crescent Body & Arch -->
+  <!-- Smooth outer curve from top to waist, inner curve back to neck -->
+  <path d="M 238,212 
+           L 290,212 
+           C 334,212 342,246 342,262 
+           C 342,286 318,304 266,306 
+           L 186,306 
+           L 186,286 
+           L 260,286 
+           C 294,286 312,278 312,262 
+           C 312,240 292,232 258,232 
+           L 238,232 Z" 
+        fill="url(#userOrangeGrad)" />
+
+  <!-- Dynamic Thick Slanted Leg / Kick (matching the bold angled leg in the image) -->
+  <polygon points="230,300 270,300 334,364 290,364" fill="url(#userOrangeGrad)" />
 </svg>
