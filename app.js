@@ -115,6 +115,25 @@
   const themeToggleOption = document.getElementById('themeToggleOption');
   const installAppOption = document.getElementById('installAppOption');
 
+  // Import Bank Statement Elements
+  const openImportModalBtn = document.getElementById('openImportModalBtn');
+  const menuImportStatementBtn = document.getElementById('menuImportStatementBtn');
+  const importModal = document.getElementById('importModal');
+  const closeImportModalBtn = document.getElementById('closeImportModalBtn');
+  const cancelImportBtn = document.getElementById('cancelImportBtn');
+  const confirmImportBtn = document.getElementById('confirmImportBtn');
+  const dropzoneContainer = document.getElementById('dropzoneContainer');
+  const bankStatementFileInput = document.getElementById('bankStatementFileInput');
+  const importStatusBanner = document.getElementById('importStatusBanner');
+  const importStatusText = document.getElementById('importStatusText');
+  const detectedBankTag = document.getElementById('detectedBankTag');
+  const importPreviewContainer = document.getElementById('importPreviewContainer');
+  const importPreviewTableBody = document.getElementById('importPreviewTableBody');
+  const parsedDebitCount = document.getElementById('parsedDebitCount');
+  const parsedTotalAmount = document.getElementById('parsedTotalAmount');
+
+  let parsedExpensesToImport = [];
+
   // --- Helper: Format Currency (INR) ---
   function formatINR(val) {
     const num = Number(val) || 0;
@@ -974,11 +993,364 @@
   closeModalBtn.addEventListener('click', closeModal);
   cancelModalBtn.addEventListener('click', closeModal);
 
+  // --- Bank Statement Parsing & Auto-Categorization Logic ---
+  
+  // Smart rule-based merchant & category identifier for Indian Transactions
+  function categorizeTransaction(narration) {
+    const text = (narration || '').toLowerCase();
+    
+    // Food & Dining
+    if (/swiggy|zomato|mcdonald|kfc|domino|starbucks|pizza|burger|cafe|tea|coffee|restaurant|hotel|baker|dhaba|eats|biryani|subway/.test(text)) {
+      return 'Food & Dining';
+    }
+    // Groceries
+    if (/blinkit|zepto|instamart|bigbasket|supermarket|dmart|reliance fresh|spencer|provision|vegetable|fruit|dairy|milk|kirana|nilgiris/.test(text)) {
+      return 'Groceries';
+    }
+    // Travel & Fuel
+    if (/petrol|fuel|hpcl|bpcl|iocl|shell|uber|ola|rapido|irctc|railway|makemytrip|indigo|air india|fastag|toll|parking|metro|flight/.test(text)) {
+      return 'Travel & Fuel';
+    }
+    // Bills & Utilities
+    if (/bescom|tneb|electricity|airtel|jio|vodafone|vi|broadband|wifi|water|gas|indane|bharat gas|billdesk|recharge|dth|tata play|lic|insurance|rent/.test(text)) {
+      return 'Bills & Utilities';
+    }
+    // Shopping
+    if (/amazon|flipkart|myntra|ajio|zara|h&m|decathlon|croma|reliance digital|meesho|nykaa|shoppers stop|lifestyle|westside|cloth|fashion/.test(text)) {
+      return 'Shopping';
+    }
+    // Entertainment
+    if (/netflix|spotify|hotstar|prime|youtube|cinema|pvr|inox|bookmyshow|game|playstation|disney|ticket|movie/.test(text)) {
+      return 'Entertainment';
+    }
+    // Health
+    if (/apollo|pharmacy|medplus|netmeds|1mg|hospital|clinic|doctor|lab|diagnostic|practo|dentist|healthcare/.test(text)) {
+      return 'Health';
+    }
+    return 'Others';
+  }
+
+  function detectPaymentMode(narration) {
+    const text = (narration || '').toUpperCase();
+    if (text.includes('UPI') || text.includes('VPA') || text.includes('GPAY') || text.includes('PAYTM') || text.includes('PHONEPE')) {
+      return 'UPI';
+    }
+    if (text.includes('POS') || text.includes('CARD') || text.includes('ECOM')) {
+      return 'Debit Card';
+    }
+    if (text.includes('ATM') || text.includes('CASH') || text.includes('WDL')) {
+      return 'Cash';
+    }
+    if (text.includes('NEFT') || text.includes('RTGS') || text.includes('IMPS') || text.includes('INB') || text.includes('NETBANKING')) {
+      return 'NetBanking';
+    }
+    return 'UPI';
+  }
+
+  // Clean raw bank narration into a readable merchant title
+  function cleanMerchantTitle(narration) {
+    if (!narration) return 'Expense';
+    let s = narration.trim();
+
+    // Standard UPI clean: e.g. "UPI/428394839/SWIGGY/HDFC" or "UPI-ZOMATO-PAY"
+    const upiMatch = s.match(/UPI(?:\/|-)[^/]+(?:\/|-)([A-Za-z0-9\s&._-]+)/i);
+    if (upiMatch && upiMatch[1]) {
+      let candidate = upiMatch[1].replace(/@[a-zA-Z0-9]+/, '').trim();
+      if (candidate.length > 2) return candidate;
+    }
+
+    // POS e.g. "POS 4012XXXXXXXX1234 RELIANCE RETAIL"
+    const posMatch = s.match(/POS\s+[X0-9]+\s+([A-Za-z0-9\s&._-]+)/i);
+    if (posMatch && posMatch[1]) {
+      return posMatch[1].trim();
+    }
+
+    // Strip long reference numbers and bank codes
+    s = s.replace(/[\d]{8,}/g, '')
+         .replace(/\b(REF|NO|TXN|UTRN|CMS|BIL|IMPS|NEFT|RTGS|NACH|ACH)\b/gi, '')
+         .replace(/[\/\\|*_-]+/g, ' ')
+         .replace(/\s+/g, ' ')
+         .trim();
+
+    return s.length > 3 ? s.substring(0, 35) : narration.substring(0, 35);
+  }
+
+  // Parse Indian Date Formats (DD/MM/YYYY, DD-MM-YYYY, YYYY-MM-DD, DD-MMM-YY, etc.)
+  function parseBankDate(dStr) {
+    if (!dStr) return new Date().toISOString().split('T')[0];
+    const s = dStr.toString().trim();
+
+    // Match DD/MM/YYYY or DD-MM-YYYY
+    const dmy = s.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})$/);
+    if (dmy) {
+      let day = dmy[1].padStart(2, '0');
+      let month = dmy[2].padStart(2, '0');
+      let year = dmy[3];
+      if (year.length === 2) year = '20' + year;
+      return `${year}-${month}-${day}`;
+    }
+
+    // Match DD-MMM-YYYY or DD MMM YYYY (e.g. 05-Oct-2026 or 05 Oct 2026)
+    const monthNames = { jan:'01', feb:'02', mar:'03', apr:'04', may:'05', jun:'06', jul:'07', aug:'08', sep:'09', oct:'10', nov:'11', dec:'12' };
+    const dMmmY = s.match(/^(\d{1,2})[\s/-]([A-Za-z]{3})[\s/-](\d{2,4})$/);
+    if (dMmmY) {
+      let day = dMmmY[1].padStart(2, '0');
+      let monKey = dMmmY[2].toLowerCase();
+      let month = monthNames[monKey] || '01';
+      let year = dMmmY[3];
+      if (year.length === 2) year = '20' + year;
+      return `${year}-${month}-${day}`;
+    }
+
+    // Match YYYY-MM-DD
+    const ymd = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (ymd) return s;
+
+    return new Date().toISOString().split('T')[0];
+  }
+
+  // Clean Indian number string e.g. " 1,450.50 ", " 1450.50 (Dr) "
+  function parseAmount(val) {
+    if (val === undefined || val === null) return 0;
+    let s = val.toString().replace(/,/g, '').replace(/₹/g, '').replace(/[^\d.-]/g, '').trim();
+    const num = parseFloat(s);
+    return isNaN(num) ? 0 : Math.abs(num);
+  }
+
+  // Bank Statement Parser Core
+  function processBankStatementRows(rows) {
+    if (!rows || rows.length < 2) {
+      alert('The uploaded file does not contain valid tabular statement rows.');
+      return;
+    }
+
+    // 1. Locate Header Row
+    let headerRowIdx = -1;
+    let detectedBank = 'Standard Statement';
+    let dateCol = -1, descCol = -1, debitCol = -1, creditCol = -1, amountCol = -1, typeCol = -1;
+
+    for (let r = 0; r < Math.min(25, rows.length); r++) {
+      const row = rows[r].map(c => (c || '').toString().trim().toLowerCase());
+      
+      // Check bank clues in upper lines or header
+      const rowStr = row.join(' ');
+      if (rowStr.includes('hdfc')) detectedBank = 'HDFC Bank';
+      else if (rowStr.includes('state bank') || rowStr.includes('sbi')) detectedBank = 'State Bank of India (SBI)';
+      else if (rowStr.includes('icici')) detectedBank = 'ICICI Bank';
+      else if (rowStr.includes('axis')) detectedBank = 'Axis Bank';
+      else if (rowStr.includes('kotak')) detectedBank = 'Kotak Mahindra';
+
+      // Look for columns: Date, Narration/Particulars/Description, Withdrawal/Debit, Credit/Deposit
+      for (let c = 0; c < row.length; c++) {
+        const col = row[c];
+        if (dateCol === -1 && (col === 'date' || col.includes('txn date') || col.includes('transaction date') || col.includes('value date'))) {
+          dateCol = c;
+        }
+        if (descCol === -1 && (col.includes('narration') || col.includes('particular') || col.includes('description') || col.includes('details') || col.includes('remarks'))) {
+          descCol = c;
+        }
+        if (debitCol === -1 && (col.includes('debit') || col.includes('withdrawal') || col.includes('dr'))) {
+          debitCol = c;
+        }
+        if (creditCol === -1 && (col.includes('credit') || col.includes('deposit') || col.includes('cr'))) {
+          creditCol = c;
+        }
+        if (amountCol === -1 && (col === 'amount' || col.includes('txn amount'))) {
+          amountCol = c;
+        }
+        if (typeCol === -1 && (col.includes('type') || col.includes('dr/cr'))) {
+          typeCol = c;
+        }
+      }
+
+      if (dateCol !== -1 && (descCol !== -1 || r > 0) && (debitCol !== -1 || amountCol !== -1)) {
+        headerRowIdx = r;
+        break;
+      }
+    }
+
+    if (headerRowIdx === -1) {
+      // Fallback heuristics: check first 3 columns
+      dateCol = 0;
+      descCol = 1;
+      debitCol = 2;
+      headerRowIdx = 0;
+    }
+
+    // 2. Extract Debit Transactions
+    const extracted = [];
+    let totalDebitSum = 0;
+
+    for (let r = headerRowIdx + 1; r < rows.length; r++) {
+      const row = rows[r];
+      if (!row || row.length <= 1) continue;
+
+      const rawDate = row[dateCol];
+      const rawDesc = descCol !== -1 ? (row[descCol] || '') : 'Expense';
+      
+      let debitAmt = 0;
+
+      if (debitCol !== -1) {
+        debitAmt = parseAmount(row[debitCol]);
+      } else if (amountCol !== -1) {
+        const rawAmt = row[amountCol];
+        const rawType = typeCol !== -1 ? (row[typeCol] || '').toLowerCase() : '';
+        const rawDescLower = rawDesc.toLowerCase();
+
+        // Check if debit or credit
+        if (rawType.includes('cr') || rawDescLower.includes('credit') || rawDescLower.includes('salary') || rawDescLower.includes('cashback')) {
+          debitAmt = 0; // Skip credits/deposits
+        } else {
+          debitAmt = parseAmount(rawAmt);
+        }
+      }
+
+      // Check if this is a genuine debit expense
+      if (debitAmt > 0 && rawDate && rawDate.toString().trim() !== '') {
+        const parsedDate = parseBankDate(rawDate);
+        const category = categorizeTransaction(rawDesc);
+        const paymentMode = detectPaymentMode(rawDesc);
+        const cleanTitle = cleanMerchantTitle(rawDesc);
+
+        extracted.push({
+          id: 'stmt_' + Date.now() + '_' + r,
+          title: cleanTitle,
+          amount: debitAmt,
+          category,
+          paymentMode,
+          date: parsedDate,
+          notes: rawDesc.substring(0, 100)
+        });
+
+        totalDebitSum += debitAmt;
+      }
+    }
+
+    if (extracted.length === 0) {
+      alert('No debit/expense transactions could be detected. Please make sure the statement contains withdrawal/debit entries.');
+      return;
+    }
+
+    // Update UI Preview
+    parsedExpensesToImport = extracted;
+    detectedBankTag.textContent = detectedBank;
+    importStatusText.textContent = `Successfully found ${extracted.length} debit transactions`;
+    parsedDebitCount.textContent = extracted.length;
+    parsedTotalAmount.textContent = `Total: ${formatINR(totalDebitSum)}`;
+
+    importPreviewTableBody.innerHTML = extracted.slice(0, 50).map(item => `
+      <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40">
+        <td class="py-1.5 px-3 whitespace-nowrap text-slate-500">${formatDate(item.date)}</td>
+        <td class="py-1.5 px-3 truncate max-w-xs text-slate-900 dark:text-white font-semibold">
+          ${item.title}
+          <div class="text-[10px] text-slate-400 truncate">${item.notes}</div>
+        </td>
+        <td class="py-1.5 px-3 whitespace-nowrap">
+          <span class="px-2 py-0.5 rounded text-[10px] font-bold" style="background-color: ${CATEGORY_COLORS[item.category]}20; color: ${CATEGORY_COLORS[item.category]};">
+            ${CATEGORY_ICONS[item.category]} ${item.category}
+          </span>
+        </td>
+        <td class="py-1.5 px-3 text-right mono font-bold text-rose-500 whitespace-nowrap">${formatINR(item.amount)}</td>
+      </tr>
+    `).join('');
+
+    importStatusBanner.classList.remove('hidden');
+    importPreviewContainer.classList.remove('hidden');
+    confirmImportBtn.removeAttribute('disabled');
+  }
+
+  // File Upload Handlers
+  function handleStatementFile(file) {
+    if (!file) return;
+    
+    // Parse using PapaParse
+    Papa.parse(file, {
+      skipEmptyLines: true,
+      complete: function(results) {
+        processBankStatementRows(results.data);
+      },
+      error: function(err) {
+        alert('Error parsing CSV file: ' + err.message);
+      }
+    });
+  }
+
+  // Modal Open/Close
+  function openImportModal() {
+    parsedExpensesToImport = [];
+    importStatusBanner.classList.add('hidden');
+    importPreviewContainer.classList.add('hidden');
+    confirmImportBtn.setAttribute('disabled', 'true');
+    bankStatementFileInput.value = '';
+    importModal.classList.remove('hidden');
+    moreMenuDropdown.classList.add('hidden');
+  }
+
+  function closeImportModal() {
+    importModal.classList.add('hidden');
+  }
+
+  openImportModalBtn.addEventListener('click', openImportModal);
+  menuImportStatementBtn.addEventListener('click', openImportModal);
+  closeImportModalBtn.addEventListener('click', closeImportModal);
+  cancelImportBtn.addEventListener('click', closeImportModal);
+
+  // Dropzone click & drag-and-drop
+  dropzoneContainer.addEventListener('click', () => bankStatementFileInput.click());
+  bankStatementFileInput.addEventListener('change', (e) => {
+    if (e.target.files && e.target.files[0]) {
+      handleStatementFile(e.target.files[0]);
+    }
+  });
+
+  dropzoneContainer.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropzoneContainer.classList.add('border-emerald-500', 'bg-emerald-500/10');
+  });
+
+  dropzoneContainer.addEventListener('dragleave', (e) => {
+    e.preventDefault();
+    dropzoneContainer.classList.remove('border-emerald-500', 'bg-emerald-500/10');
+  });
+
+  dropzoneContainer.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropzoneContainer.classList.remove('border-emerald-500', 'bg-emerald-500/10');
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleStatementFile(e.dataTransfer.files[0]);
+    }
+  });
+
+  // Confirm Import
+  confirmImportBtn.addEventListener('click', () => {
+    if (parsedExpensesToImport.length === 0) return;
+
+    // Prevent duplicate entries by checking date + amount + title
+    let addedCount = 0;
+    parsedExpensesToImport.forEach(newExp => {
+      const isDuplicate = expenses.some(existing => 
+        existing.date === newExp.date && 
+        Math.abs(existing.amount - newExp.amount) < 0.01 &&
+        existing.title === newExp.title
+      );
+      if (!isDuplicate) {
+        expenses.unshift(newExp);
+        addedCount++;
+      }
+    });
+
+    saveData();
+    closeImportModal();
+    refreshView();
+    alert(`Successfully imported ${addedCount} expenses from your bank statement! (${parsedExpensesToImport.length - addedCount} duplicates skipped)`);
+  });
+
   // Close modals on Esc key
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       closeModal();
       closeBudgetModal();
+      closeImportModal();
       monthDropdownMenu.classList.add('hidden');
       moreMenuDropdown.classList.add('hidden');
     }
