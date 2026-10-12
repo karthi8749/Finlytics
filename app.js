@@ -601,6 +601,7 @@
 
     const netDailyAvg = count > 0 ? (netSpent / daysPassed) : 0;
     const grossDailyAvg = count > 0 ? (totalSpent / daysPassed) : 0;
+    const dailyAvg = netDailyAvg;
 
     kpiDailyAvg.textContent = formatINR(netDailyAvg);
     const projected = netDailyAvg * daysInPeriod;
