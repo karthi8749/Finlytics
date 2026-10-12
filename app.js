@@ -899,17 +899,41 @@
       }
     }
 
-    // 4. UPI vs Card Cashflow Health
-    const upiSpent = filteredList.filter(e => e.paymentMode === 'UPI').reduce((s, e) => s + e.amount, 0);
-    const upiPct = totalSpent > 0 ? (upiSpent / totalSpent) * 100 : 0;
-    if (upiPct >= 75 && totalSpent > 3000) {
+    // 4. Peak Spending Day of the Week (Option 2)
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const dayTotals = [0, 0, 0, 0, 0, 0, 0];
+    const dayCounts = [0, 0, 0, 0, 0, 0, 0];
+
+    filteredList.forEach(e => {
+      if (!e.date) return;
+      const dayIdx = new Date(e.date).getDay();
+      if (!isNaN(dayIdx)) {
+        dayTotals[dayIdx] += e.amount;
+        dayCounts[dayIdx]++;
+      }
+    });
+
+    let maxDayIdx = 0;
+    let maxDayAmt = 0;
+    for (let d = 0; d < 7; d++) {
+      if (dayTotals[d] > maxDayAmt) {
+        maxDayAmt = dayTotals[d];
+        maxDayIdx = d;
+      }
+    }
+
+    if (maxDayAmt > 0 && totalSpent > 0) {
+      const peakDayPct = ((maxDayAmt / totalSpent) * 100).toFixed(0);
+      const peakName = dayNames[maxDayIdx];
+      const isWeekendDay = maxDayIdx === 0 || maxDayIdx === 6;
+
       insights.push({
-        type: 'payment',
-        icon: 'smartphone',
-        color: 'emerald',
-        badge: 'Cashflow Optimization',
-        title: `Heavy UPI Usage (${upiPct.toFixed(0)}%)`,
-        desc: `Almost all spends (${formatINR(upiSpent)}) are debiting directly via UPI. Paying utility/bills via credit card can earn cashback and keep savings in bank interest longer.`
+        type: 'peak_day',
+        icon: 'calendar',
+        color: isWeekendDay ? 'rose' : 'blue',
+        badge: 'Peak Spend Day 📊',
+        title: `${peakName} is your Highest Spend Day (${peakDayPct}%)`,
+        desc: `${formatINR(maxDayAmt)} spent across ${dayCounts[maxDayIdx]} transactions on ${peakName}s. Setting a daily limit on this day can save significant funds.`
       });
     }
 
@@ -1060,7 +1084,7 @@
     expenseTableBody.innerHTML = filteredList.map(item => {
       const catColor = CATEGORY_COLORS[item.category] || '#10b981';
       const catIcon = CATEGORY_ICONS[item.category] || '📦';
-      const fullTooltip = (item.notes ? `${item.title} — ${item.notes}` : item.title).replace(/"/g, '&quot;');
+      const fullTooltip = (item.notes && item.notes.length > item.title.length ? item.notes : `${item.title}${item.notes ? ' — ' + item.notes : ''}`).replace(/"/g, '&quot;');
       return `
         <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition">
           <td class="py-3 px-4 text-slate-500 dark:text-slate-400 whitespace-nowrap">
@@ -1100,7 +1124,7 @@
     mobileExpenseCardList.innerHTML = filteredList.map(item => {
       const catColor = CATEGORY_COLORS[item.category] || '#10b981';
       const catIcon = CATEGORY_ICONS[item.category] || '📦';
-      const fullTooltip = (item.notes ? `${item.title} — ${item.notes}` : item.title).replace(/"/g, '&quot;');
+      const fullTooltip = (item.notes && item.notes.length > item.title.length ? item.notes : `${item.title}${item.notes ? ' — ' + item.notes : ''}`).replace(/"/g, '&quot;');
       return `
         <div class="bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 flex items-center justify-between gap-3 shadow-sm group" title="${fullTooltip}">
           <div class="flex items-center gap-3 min-w-0">
@@ -1844,7 +1868,7 @@
           category,
           paymentMode,
           date: parsedDate,
-          notes: rawDesc.substring(0, 100)
+          notes: rawDesc.trim()
         });
 
         totalDebitSum += debitAmt;
@@ -2319,7 +2343,7 @@
               category: category,
               paymentMode: paymentMode,
               date: t.date,
-              notes: t.narration.substring(0, 150)
+              notes: t.narration.trim()
             };
           });
 
