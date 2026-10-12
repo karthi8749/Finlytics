@@ -864,6 +864,37 @@
     </div>
   </div>
 
+  <!-- Modal: Micro-Purchases Breakdown Modal -->
+  <div id="microPurchasesModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-3">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-lg p-5 sm:p-6 shadow-2xl relative max-h-[85vh] flex flex-col animate-in fade-in zoom-in-95 duration-150">
+      
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 shrink-0">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center shrink-0">
+            <i data-lucide="coffee" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h3 class="text-sm sm:text-base font-bold text-slate-900 dark:text-white" id="microModalTitle">Micro-Purchases Breakdown</h3>
+            <p class="text-xs text-slate-400 mt-0.5" id="microModalSubtitle">Transactions under ₹200</p>
+          </div>
+        </div>
+        <button id="closeMicroModalBtn" class="text-slate-400 hover:text-slate-200 p-1 rounded-lg">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="py-3 flex-1 overflow-y-auto space-y-2 pr-1" id="microModalList">
+        <!-- Dynamically populated item cards -->
+      </div>
+
+      <div class="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0">
+        <div class="text-xs text-slate-400" id="microModalTotal">Total: ₹0</div>
+        <button type="button" id="doneMicroModalBtn" class="px-5 py-2 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-600 text-slate-950 transition shadow-lg shadow-amber-500/20 active:scale-95">Done</button>
+      </div>
+
+    </div>
+  </div>
+
   <!-- App Logic -->
   <script src="app.js"></script>
 </body>

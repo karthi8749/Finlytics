@@ -938,8 +938,8 @@
       });
     }
 
-    // Render cards
-    aiGrid.innerHTML = insights.slice(0, 3).map(item => {
+    // Render cards with click support for micro spends
+    aiGrid.innerHTML = insights.slice(0, 3).map((item, idx) => {
       const colorMap = {
         rose: { bg: 'bg-rose-500/10 border-rose-500/20 text-rose-400', badge: 'bg-rose-500/20 text-rose-300' },
         amber: { bg: 'bg-amber-500/10 border-amber-500/20 text-amber-400', badge: 'bg-amber-500/20 text-amber-300' },
@@ -948,25 +948,100 @@
         indigo: { bg: 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400', badge: 'bg-indigo-500/20 text-indigo-300' }
       };
       const theme = colorMap[item.color] || colorMap.indigo;
+      const isClickable = item.type === 'micro';
 
       return `
-        <div class="p-3.5 rounded-xl bg-slate-900/60 dark:bg-slate-900/90 border ${theme.bg} backdrop-blur-sm flex flex-col justify-between space-y-2 hover:border-emerald-500/40 transition">
+        <div data-ai-type="${item.type}" class="p-3.5 rounded-xl bg-slate-900/60 dark:bg-slate-900/90 border ${theme.bg} backdrop-blur-sm flex flex-col justify-between space-y-2 hover:border-emerald-500/40 transition ${isClickable ? 'cursor-pointer hover:scale-[1.02] active:scale-95 shadow-md shadow-amber-500/5' : ''}">
           <div class="space-y-1.5">
             <div class="flex items-center justify-between">
               <span class="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${theme.badge}">
                 ${item.badge}
               </span>
-              <i data-lucide="${item.icon}" class="w-4 h-4 ${theme.bg.split(' ')[2]}"></i>
+              <div class="flex items-center gap-1">
+                ${isClickable ? '<span class="text-[10px] text-amber-400 font-bold underline mr-1">View All &rarr;</span>' : ''}
+                <i data-lucide="${item.icon}" class="w-4 h-4 ${theme.bg.split(' ')[2]}"></i>
+              </div>
             </div>
-            <h4 class="text-xs font-bold text-slate-100">${item.title}</h4>
+            <h4 class="text-xs font-bold text-slate-100 flex items-center gap-1.5">
+              <span>${item.title}</span>
+            </h4>
             <p class="text-[11px] text-slate-300/90 leading-relaxed">${item.desc}</p>
+          </div>
+          ${isClickable ? `
+            <div class="pt-1 border-t border-amber-500/20 flex items-center justify-between text-[10px] text-amber-300/80 font-medium">
+              <span>Tap to list all ${microItems.length} transactions</span>
+              <span>🔍</span>
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }).join('');
+
+    // Attach click listener to micro spends card
+    const microCard = aiGrid.querySelector('[data-ai-type="micro"]');
+    if (microCard) {
+      microCard.addEventListener('click', () => {
+        openMicroPurchasesModal(microItems, microSum);
+      });
+    }
+
+    if (window.lucide) lucide.createIcons();
+  }
+
+  // --- Micro-Purchases Breakdown Modal Logic ---
+  const microPurchasesModal = document.getElementById('microPurchasesModal');
+  const closeMicroModalBtn = document.getElementById('closeMicroModalBtn');
+  const doneMicroModalBtn = document.getElementById('doneMicroModalBtn');
+  const microModalList = document.getElementById('microModalList');
+  const microModalTitle = document.getElementById('microModalTitle');
+  const microModalSubtitle = document.getElementById('microModalSubtitle');
+  const microModalTotal = document.getElementById('microModalTotal');
+
+  function openMicroPurchasesModal(items, totalSum) {
+    if (!microPurchasesModal) return;
+    
+    microModalTitle.textContent = `${items.length} Micro-Purchases Breakdown`;
+    microModalSubtitle.textContent = `All quick expenses ≤ ₹200 from this period`;
+    microModalTotal.innerHTML = `Total: <strong class="text-amber-400 font-mono text-sm">${formatINR(totalSum)}</strong>`;
+
+    microModalList.innerHTML = items.map(item => {
+      const catColor = CATEGORY_COLORS[item.category] || '#10b981';
+      const catIcon = CATEGORY_ICONS[item.category] || '📦';
+      const fullTooltip = (item.notes ? `${item.title} — ${item.notes}` : item.title).replace(/"/g, '&quot;');
+
+      return `
+        <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 flex items-center justify-between gap-3 text-xs" title="${fullTooltip}">
+          <div class="flex items-center gap-2.5 min-w-0">
+            <span class="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-sm" style="background-color: ${catColor}20;">
+              ${catIcon}
+            </span>
+            <div class="min-w-0">
+              <h5 class="font-bold text-slate-900 dark:text-white truncate">${item.title}</h5>
+              <div class="text-[10px] text-slate-400 flex items-center gap-1.5 mt-0.5">
+                <span>${formatDate(item.date)}</span>
+                <span>•</span>
+                <span class="text-slate-300">${item.paymentMode}</span>
+                ${item.notes ? `<span>•</span><span class="truncate max-w-[120px] text-slate-400">${item.notes}</span>` : ''}
+              </div>
+            </div>
+          </div>
+          <div class="text-right shrink-0">
+            <span class="mono font-bold text-amber-400 text-sm">${formatINR(item.amount)}</span>
           </div>
         </div>
       `;
     }).join('');
 
+    microPurchasesModal.classList.remove('hidden');
     if (window.lucide) lucide.createIcons();
   }
+
+  function closeMicroModal() {
+    if (microPurchasesModal) microPurchasesModal.classList.add('hidden');
+  }
+
+  if (closeMicroModalBtn) closeMicroModalBtn.addEventListener('click', closeMicroModal);
+  if (doneMicroModalBtn) doneMicroModalBtn.addEventListener('click', closeMicroModal);
 
   // --- Render Expense Table & Mobile Cards ---
   function renderExpenseList(filteredList) {
@@ -985,14 +1060,15 @@
     expenseTableBody.innerHTML = filteredList.map(item => {
       const catColor = CATEGORY_COLORS[item.category] || '#10b981';
       const catIcon = CATEGORY_ICONS[item.category] || '📦';
+      const fullTooltip = (item.notes ? `${item.title} — ${item.notes}` : item.title).replace(/"/g, '&quot;');
       return `
         <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition">
           <td class="py-3 px-4 text-slate-500 dark:text-slate-400 whitespace-nowrap">
             ${formatDate(item.date)}
           </td>
-          <td class="py-3 px-4 text-slate-900 dark:text-white font-semibold">
-            ${item.title}
-            ${item.notes ? `<div class="text-[11px] text-slate-400 font-normal truncate max-w-xs">${item.notes}</div>` : ''}
+          <td class="py-3 px-4 text-slate-900 dark:text-white font-semibold group cursor-help" title="${fullTooltip}">
+            <div class="hover:text-emerald-400 transition inline-block">${item.title}</div>
+            ${item.notes ? `<div class="text-[11px] text-slate-400 font-normal truncate max-w-sm group-hover:text-slate-300 transition" title="${fullTooltip}">${item.notes}</div>` : ''}
           </td>
           <td class="py-3 px-4">
             <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold" style="background-color: ${catColor}15; color: ${catColor}; border: 1px solid ${catColor}30;">
@@ -1024,20 +1100,21 @@
     mobileExpenseCardList.innerHTML = filteredList.map(item => {
       const catColor = CATEGORY_COLORS[item.category] || '#10b981';
       const catIcon = CATEGORY_ICONS[item.category] || '📦';
+      const fullTooltip = (item.notes ? `${item.title} — ${item.notes}` : item.title).replace(/"/g, '&quot;');
       return `
-        <div class="bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 flex items-center justify-between gap-3 shadow-sm">
+        <div class="bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 flex items-center justify-between gap-3 shadow-sm group" title="${fullTooltip}">
           <div class="flex items-center gap-3 min-w-0">
             <div class="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0" style="background-color: ${catColor}15;">
               ${catIcon}
             </div>
             <div class="min-w-0">
-              <h4 class="text-xs font-bold text-slate-900 dark:text-white truncate">${item.title}</h4>
+              <h4 class="text-xs font-bold text-slate-900 dark:text-white truncate cursor-help group-hover:text-emerald-400 transition" title="${fullTooltip}">${item.title}</h4>
               <div class="flex items-center gap-2 text-[10px] text-slate-400 mt-0.5">
                 <span>${formatDate(item.date)}</span>
                 <span>•</span>
                 <span class="px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-300">${item.paymentMode}</span>
               </div>
-              ${item.notes ? `<p class="text-[10px] text-slate-400 truncate mt-0.5">${item.notes}</p>` : ''}
+              ${item.notes ? `<p class="text-[10px] text-slate-400 truncate mt-0.5 cursor-help" title="${fullTooltip}">${item.notes}</p>` : ''}
             </div>
           </div>
           <div class="text-right shrink-0">
