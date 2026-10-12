@@ -1739,9 +1739,11 @@
 
       const pdf = await loadingTask.promise;
       const parsedTransactions = [];
-      let detectedBankName = 'State Bank of India (SBI)';
+      let detectedBankName = 'Bank Statement (PDF)';
 
-      // Process all pages
+      // Collect all pages' line data
+      const allPagesLines = [];
+
       for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
         const page = await pdf.getPage(pageNum);
         const textContent = await page.getTextContent();
@@ -1773,124 +1775,289 @@
 
         // Sort lines top to bottom (descending Y)
         const sortedYKeys = Array.from(lineMap.keys()).sort((a, b) => b - a);
-
-        // Analyze spatial layout or column bounds on the page
-        // Standard SBI Table Columns:
-        // [Date ~30-70] [Narration ~70-280] [RefNo ~280-350] [Value Date ~350-400] [Withdrawal ~400-480] [Deposit ~480-550] [Closing Balance ~550-620]
-        
-        let currentTxn = null;
-
         for (const y of sortedYKeys) {
           const lineItems = lineMap.get(y).sort((a, b) => a.x - b.x);
+          allPagesLines.push(lineItems);
+        }
+      }
+
+      // --- STRATEGY 1: Dynamic Header-Based Column Detection ---
+      // Scan lines for a header row that contains keywords like 'date', 'withdrawal'/'debit', 'narration'/'description'
+      let headerLineIdx = -1;
+      let colBounds = { date: null, narration: null, withdrawal: null, deposit: null, balance: null, refno: null, valueDate: null };
+
+      for (let i = 0; i < allPagesLines.length; i++) {
+        const lineItems = allPagesLines[i];
+        const fullText = lineItems.map(it => it.str).join(' ').toLowerCase();
+
+        const hasDate = /\bdate\b/.test(fullText);
+        const hasWithdrawal = /\b(withdrawal|debit|dr|debit\s*amount)\b/.test(fullText);
+        const hasNarration = /\b(narration|description|particulars|details|remark)\b/.test(fullText);
+
+        if (hasDate && (hasWithdrawal || hasNarration)) {
+          headerLineIdx = i;
+
+          // Record X positions of each detected column header
+          // Also check full line text for multi-word headers that PDF.js may split
+          const headerFullText = lineItems.map(it => it.str).join(' ').toLowerCase();
+          
+          for (const item of lineItems) {
+            const lStr = item.str.toLowerCase();
+            
+            // Value Date column (check item or full line context)
+            if (/value/.test(lStr) && /value\s*date/.test(headerFullText)) {
+              colBounds.valueDate = { x: item.x, w: item.w };
+            }
+            // Post Date or just Date column (not Value Date)
+            if (/\bdate\b/.test(lStr) && !colBounds.date && !/value/.test(lStr)) {
+              // Make sure this isn't the "Date" part of "Value Date"
+              const isValueDatePart = colBounds.valueDate && Math.abs(item.x - colBounds.valueDate.x) < 60;
+              if (!isValueDatePart) {
+                colBounds.date = { x: item.x, w: item.w };
+              }
+            }
+            if (/\b(narration|description|particulars|details|remark)\b/.test(lStr)) {
+              colBounds.narration = { x: item.x, w: item.w };
+            }
+            if (/\b(withdrawal|debit)\b/.test(lStr) && !/credit/.test(lStr)) {
+              colBounds.withdrawal = { x: item.x, w: item.w };
+            }
+            if (/\b(deposit|credit)\b/.test(lStr) && !/debit/.test(lStr)) {
+              colBounds.deposit = { x: item.x, w: item.w };
+            }
+            if (/\b(balance|closing)\b/.test(lStr)) {
+              colBounds.balance = { x: item.x, w: item.w };
+            }
+            if (/\b(ref|chq|cheque)\b/.test(lStr)) {
+              colBounds.refno = { x: item.x, w: item.w };
+            }
+          }
+          
+          // If no separate Date column found but Value Date exists, use Value Date as the date column
+          if (!colBounds.date && colBounds.valueDate) {
+            colBounds.date = colBounds.valueDate;
+          }
+
+          // Detect bank name from earlier lines
+          for (let j = 0; j < Math.min(i, 10); j++) {
+            const earlyText = allPagesLines[j].map(it => it.str).join(' ').toLowerCase();
+            if (earlyText.includes('state bank')) detectedBankName = 'State Bank of India (SBI)';
+            else if (earlyText.includes('hdfc')) detectedBankName = 'HDFC Bank';
+            else if (earlyText.includes('icici')) detectedBankName = 'ICICI Bank';
+            else if (earlyText.includes('axis')) detectedBankName = 'Axis Bank';
+            else if (earlyText.includes('kotak')) detectedBankName = 'Kotak Mahindra Bank';
+            else if (earlyText.includes('canara')) detectedBankName = 'Canara Bank';
+            else if (earlyText.includes('union bank')) detectedBankName = 'Union Bank';
+            else if (earlyText.includes('bank of baroda') || earlyText.includes('bob')) detectedBankName = 'Bank of Baroda';
+            else if (earlyText.includes('indian bank')) detectedBankName = 'Indian Bank';
+            else if (earlyText.includes('pnb') || earlyText.includes('punjab national')) detectedBankName = 'Punjab National Bank';
+          }
+          break;
+        }
+      }
+
+      // Helper: assign a cell value to a column based on X proximity
+      function getColumnForX(x) {
+        const cols = [];
+        if (colBounds.date) cols.push({ name: 'date', cx: colBounds.date.x, w: colBounds.date.w });
+        if (colBounds.narration) cols.push({ name: 'narration', cx: colBounds.narration.x, w: colBounds.narration.w });
+        if (colBounds.withdrawal) cols.push({ name: 'withdrawal', cx: colBounds.withdrawal.x, w: colBounds.withdrawal.w });
+        if (colBounds.deposit) cols.push({ name: 'deposit', cx: colBounds.deposit.x, w: colBounds.deposit.w });
+        if (colBounds.balance) cols.push({ name: 'balance', cx: colBounds.balance.x, w: colBounds.balance.w });
+        if (colBounds.refno) cols.push({ name: 'refno', cx: colBounds.refno.x, w: colBounds.refno.w });
+        if (colBounds.valueDate) cols.push({ name: 'valueDate', cx: colBounds.valueDate.x, w: colBounds.valueDate.w });
+
+        if (cols.length === 0) return null;
+
+        // Find nearest column by X center proximity (with tolerance based on column width)
+        let bestCol = null;
+        let bestDist = Infinity;
+        for (const col of cols) {
+          const colCenter = col.cx + col.w / 2;
+          const dist = Math.abs(x - col.cx);
+          const tolerance = Math.max(col.w, 60);
+          if (dist < tolerance && dist < bestDist) {
+            bestDist = dist;
+            bestCol = col.name;
+          }
+        }
+        return bestCol;
+      }
+
+      // Parse data rows using dynamic column bounds
+      if (headerLineIdx >= 0) {
+        let currentTxn = null;
+
+        for (let i = headerLineIdx + 1; i < allPagesLines.length; i++) {
+          const lineItems = allPagesLines[i];
           const fullLineText = lineItems.map(it => it.str).join(' ');
 
-          // Check if this line starts a new transaction row with a date: DD/MM/YY or DD/MM/YYYY
-          // SBI Date format is typically DD/MM/YY or DD/MM/YYYY at the beginning of the line
+          // Skip header repetitions on subsequent pages
+          const fullLower = fullLineText.toLowerCase();
+          const hasHeaderKeywords = /\b(narration|withdrawal|deposit|description|particulars|details)\b/.test(fullLower);
+          const hasDateKeyword = /\bdate\b/.test(fullLower);
+          const hasDebitCredit = /\b(debit|credit)\b/.test(fullLower) && /\bdate\b/.test(fullLower);
+          if ((hasHeaderKeywords && hasDateKeyword) || hasDebitCredit) {
+            continue;
+          }
+
+          // Skip summary/footer lines
+          const isSummaryLine = /statement summary|closing balance|page no|from\s*:|to\s*:|branch\s*:|total\s*:|carried forward|opening balance/i.test(fullLineText);
+          if (isSummaryLine) continue;
+
+          // Check if line starts with a date
           const firstItem = lineItems[0];
           const dateMatch = firstItem ? firstItem.str.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})$/) : null;
+          const dateMatchAlt = firstItem ? firstItem.str.match(/^(\d{1,2})\s*[/-]?\s*([A-Za-z]{3})\s*[/-]?\s*(\d{2,4})$/) : null;
 
-          if (dateMatch && firstItem.x < 100) {
-            // If we have an existing accumulated transaction, push it
-            if (currentTxn && currentTxn.amount > 0) {
+          if ((dateMatch || dateMatchAlt) && (
+              (colBounds.date && Math.abs(firstItem.x - colBounds.date.x) < 80) ||
+              (colBounds.valueDate && Math.abs(firstItem.x - colBounds.valueDate.x) < 80)
+            )) {
+            // Flush previous transaction
+            if (currentTxn && currentTxn.amount > 0 && currentTxn.isDebit) {
               parsedTransactions.push(currentTxn);
             }
 
-            const rawDate = firstItem.str;
-            let narrationParts = [];
-            let withdrawalStr = '';
-            let depositStr = '';
-            let balanceStr = '';
+            let rowData = { date: firstItem.str, narration: '', withdrawal: '', deposit: '', balance: '' };
 
-            // Categorize other items on the same line based on X position
-            for (let i = 1; i < lineItems.length; i++) {
-              const it = lineItems[i];
-              // Check if item is a number (e.g. 40.00, 3,800.00, 10,496.21)
+            for (let k = 1; k < lineItems.length; k++) {
+              const it = lineItems[k];
+              const col = getColumnForX(it.x);
               const isNumeric = /^[\d,]+(?:\.\d{1,2})?$/.test(it.str.replace(/[^\d.,]/g, ''));
 
-              if (it.x < 270) {
-                // Narration column
-                narrationParts.push(it.str);
-              } else if (it.x >= 270 && it.x < 360) {
-                // Cheque / Ref No. column -> ignore or store in notes
-              } else if (it.x >= 360 && it.x < 420) {
-                // Value Date column -> ignore
-              } else if (it.x >= 420 && it.x < 500) {
-                // Withdrawal column! (Debited amount)
-                if (isNumeric) withdrawalStr = it.str;
-              } else if (it.x >= 500 && it.x < 570) {
-                // Deposit column (Credits)
-                if (isNumeric) depositStr = it.str;
-              } else if (it.x >= 570) {
-                // Closing Balance
-                if (isNumeric) balanceStr = it.str;
-              } else {
-                narrationParts.push(it.str);
+              if (col === 'narration') {
+                rowData.narration += (rowData.narration ? ' ' : '') + it.str;
+              } else if (col === 'withdrawal' && isNumeric) {
+                rowData.withdrawal = it.str;
+              } else if (col === 'deposit' && isNumeric) {
+                rowData.deposit = it.str;
+              } else if (col === 'balance' && isNumeric) {
+                rowData.balance = it.str;
+              } else if (col === 'refno' || col === 'valueDate' || col === 'date') {
+                // ignore date/ref columns
+              } else if (it.str === '₹' || it.str === '-') {
+                // ignore currency symbol and dash placeholders
+              } else if (!isNumeric) {
+                // Likely narration text
+                rowData.narration += (rowData.narration ? ' ' : '') + it.str;
               }
             }
 
-            // Fallback column parsing if X positions shifted (e.g. 6 items: [Date, Narration, Ref, ValDt, Withdrawal, Balance])
-            if (!withdrawalStr && !depositStr) {
-              // Extract numeric items at the end of the line
-              const numbersInLine = lineItems.filter(it => /^[\d,]+\.\d{2}$/.test(it.str));
-              if (numbersInLine.length === 2) {
-                // If 2 numbers, first is usually Withdrawal or Deposit, second is Balance!
-                const firstNum = numbersInLine[0];
-                const lastNum = numbersInLine[1];
-                // Check X position of firstNum to see if it's Withdrawal (<510) or Deposit
-                if (firstNum.x < 515) {
-                  withdrawalStr = firstNum.str;
-                } else {
-                  depositStr = firstNum.str;
-                }
-              } else if (numbersInLine.length === 1 && lineItems.length >= 4) {
-                // Only balance present -> no withdrawal on this row
+            // If no withdrawal column was detected in header, try fallback: use numeric items
+            if (!colBounds.withdrawal) {
+              const numerics = lineItems.filter(it => /^[\d,]+\.\d{2}$/.test(it.str));
+              if (numerics.length >= 2) {
+                // First number is likely debit/credit, last is balance
+                rowData.withdrawal = numerics[0].str;
               }
             }
 
-            const debitAmt = parseAmount(withdrawalStr);
+            const debitAmt = parseAmount(rowData.withdrawal);
 
             currentTxn = {
-              date: parseBankDate(rawDate),
-              narration: narrationParts.join(' ').trim(),
+              date: parseBankDate(rowData.date),
+              narration: rowData.narration.trim(),
               amount: debitAmt,
-              isDebit: debitAmt > 0 && !depositStr
+              isDebit: debitAmt > 0 && !rowData.deposit
             };
 
           } else if (currentTxn) {
-            // Continuation of multi-line narration from previous row!
-            // Ignore headers, footers, summary lines, and summary blocks
-            const isSummaryLine = /statement summary|closing balance|page no|from\s*:|to\s*:|branch\s*:|total\s*:|carried forward/i.test(fullLineText);
-            
+            // Continuation line: append to narration
             if (!isSummaryLine) {
-              // Add text to narration if on left side
-              const textOnly = lineItems.filter(it => it.x < 360).map(it => it.str).join(' ');
-              if (textOnly) {
+              const textOnly = lineItems.filter(it => {
+                if (colBounds.narration) {
+                  return Math.abs(it.x - colBounds.narration.x) < 200;
+                }
+                return it.x < 360;
+              }).map(it => it.str).join(' ');
+              if (textOnly && !/^[\d,]+\.\d{2}$/.test(textOnly.trim())) {
                 currentTxn.narration += ' ' + textOnly;
               }
             }
           }
         }
 
-        // Flush last txn of the page
-        if (currentTxn && currentTxn.amount > 0) {
+        // Flush last transaction
+        if (currentTxn && currentTxn.amount > 0 && currentTxn.isDebit) {
           parsedTransactions.push(currentTxn);
-          currentTxn = null;
         }
       }
 
-      // Convert extracted structured transactions to dashboard expense format
+      // --- STRATEGY 2: Fallback text-line based extraction if Strategy 1 found nothing ---
+      if (parsedTransactions.length === 0) {
+        // Try a simpler approach: scan each line for date + amount patterns
+        for (let i = 0; i < allPagesLines.length; i++) {
+          const lineItems = allPagesLines[i];
+          const fullText = lineItems.map(it => it.str).join(' ');
+
+          // Skip headers/footers
+          if (/statement summary|page no|branch\s*:|opening balance/i.test(fullText)) continue;
+
+          // Look for lines starting with a date
+          const firstStr = lineItems[0] ? lineItems[0].str : '';
+          const dateMatch = firstStr.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})$/);
+          const dateMatchAlt = firstStr.match(/^(\d{1,2})\s*[/-]?\s*([A-Za-z]{3})\s*[/-]?\s*(\d{2,4})$/);
+
+          if (dateMatch || dateMatchAlt) {
+            // Collect all numbers in the line
+            const numericItems = lineItems.filter(it => /^[\d,]+\.\d{2}$/.test(it.str));
+            // Collect narration text (non-date, non-numeric items)
+            const narrationItems = lineItems.slice(1).filter(it => !/^[\d,]+\.\d{2}$/.test(it.str));
+            const narration = narrationItems.map(it => it.str).join(' ');
+
+            if (numericItems.length >= 2) {
+              // If there are 2+ numbers, first could be withdrawal, last is balance
+              // Try to detect Dr/Cr indicators in the line
+              const fullLower = fullText.toLowerCase();
+              const hasCr = /\bcr\b|credit|deposit/i.test(fullLower);
+
+              if (!hasCr) {
+                const debitAmt = parseAmount(numericItems[0].str);
+                if (debitAmt > 0) {
+                  parsedTransactions.push({
+                    date: parseBankDate(firstStr),
+                    narration: narration.trim(),
+                    amount: debitAmt,
+                    isDebit: true
+                  });
+                }
+              }
+            } else if (numericItems.length === 1) {
+              // Single amount - check context for debit indicators
+              const fullLower = fullText.toLowerCase();
+              const isDebit = /\b(dr|debit|withdrawal|paid|purchase|transfer)\b/i.test(fullLower);
+              const isCredit = /\b(cr|credit|deposit|received|refund|salary|cashback)\b/i.test(fullLower);
+
+              if (isDebit && !isCredit) {
+                const debitAmt = parseAmount(numericItems[0].str);
+                if (debitAmt > 0) {
+                  parsedTransactions.push({
+                    date: parseBankDate(firstStr),
+                    narration: narration.trim(),
+                    amount: debitAmt,
+                    isDebit: true
+                  });
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // Convert extracted transactions to dashboard expense format
       if (parsedTransactions.length > 0) {
         let totalDebitSum = 0;
         const formattedExpenses = parsedTransactions
           .filter(t => {
             if (t.amount <= 0 || !t.isDebit) return false;
-            // Explicitly exclude non-expense entries (Interest credited by bank, statement summary rows, refunds)
+            // Explicitly exclude non-expense entries
             const narrLower = (t.narration || '').toLowerCase();
             if (narrLower.includes('interest paid') || 
                 narrLower.includes('interest credit') || 
                 narrLower.includes('statement summary') ||
                 narrLower.includes('closing balance')) {
-              return false; // Skip bank interest credits and summaries
+              return false;
             }
             return true;
           })
@@ -1901,7 +2068,7 @@
             totalDebitSum += t.amount;
 
             return {
-              id: 'stmt_sbi_' + Date.now() + '_' + idx,
+              id: 'stmt_pdf_' + Date.now() + '_' + idx,
               title: cleanTitle,
               amount: t.amount,
               category: category,
@@ -1914,7 +2081,7 @@
         if (formattedExpenses.length > 0) {
           parsedExpensesToImport = formattedExpenses;
           detectedBankTag.textContent = detectedBankName;
-          importStatusText.textContent = `Successfully extracted ${formattedExpenses.length} SBI debit transactions`;
+          importStatusText.textContent = `Successfully extracted ${formattedExpenses.length} debit transactions`;
           parsedDebitCount.textContent = formattedExpenses.length;
           parsedTotalAmount.textContent = `Total: ${formatINR(totalDebitSum)}`;
 
@@ -1941,8 +2108,8 @@
         }
       }
 
-      // Fallback: If structured parser didn't match, try standard row extractor
-      alert('Could not detect debit transactions in this PDF. Please check if the file is an SBI Account Statement with Withdrawal column.');
+      // Final fallback: nothing detected
+      alert('Could not detect debit transactions in this PDF. Please try uploading the statement as Excel (.xlsx) or CSV format for better compatibility.');
 
     } catch (err) {
       console.error('PDF parsing error:', err);
