@@ -1058,16 +1058,61 @@
       });
     }
 
-    // Fallback if very few conditions matched
+    // Dynamic Productive Financial Metrics & Smart Savings Actions
     if (insights.length < 3) {
-      insights.push({
-        type: 'general',
-        icon: 'sparkles',
-        color: 'indigo',
-        badge: 'Smart Budget Rule',
-        title: '50-30-20 Financial Rule',
-        desc: 'Aim for 50% Essentials (Rent, Groceries, Bills), 30% Wants (Dining, Shopping), and 20% Direct Wealth Savings.'
+      // Metric A: Daily Run-Rate & Projected Month-End Spend
+      const uniqueDates = new Set(filteredList.filter(e => e.date).map(e => e.date));
+      const activeDaysCount = Math.max(1, uniqueDates.size);
+      const dailyAverage = totalSpent / activeDaysCount;
+      const daysInMonth = 30;
+      const projectedMonthTotal = dailyAverage * daysInMonth;
+
+      if (dailyAverage > 0) {
+        insights.push({
+          type: 'daily_pace',
+          icon: 'trending-up',
+          color: 'blue',
+          badge: 'Daily Spending Velocity',
+          title: `Daily Average: ${formatINR(dailyAverage)}/day`,
+          desc: `Based on ${activeDaysCount} active days, your estimated 30-day projected spend is ${formatINR(projectedMonthTotal)}. Keep daily spend under ${formatINR(monthlyBudget > 0 ? monthlyBudget / 30 : dailyAverage * 0.8)} to maximize monthly wealth.`
+        });
+      }
+    }
+
+    if (insights.length < 3) {
+      // Metric B: Largest Single Outflow Alert & Actionable Impact
+      const sortedByAmount = [...filteredList].sort((a, b) => b.amount - a.amount);
+      if (sortedByAmount.length > 0) {
+        const topTxn = sortedByAmount[0];
+        const topPct = totalSpent > 0 ? ((topTxn.amount / totalSpent) * 100).toFixed(0) : 0;
+        insights.push({
+          type: 'heavy_outflow',
+          icon: 'zap',
+          color: 'indigo',
+          badge: 'Largest Single Outflow',
+          title: `${topTxn.title}: ${formatINR(topTxn.amount)} (${topPct}%)`,
+          desc: `A single expense accounted for ${topPct}% of your total statement outgo. Splitting large payments or deferring non-essential purchases preserves immediate liquid runway.`
+        });
+      }
+    }
+
+    if (insights.length < 3) {
+      // Metric C: High-Volume Category Breakdown
+      const catCounts = {};
+      filteredList.forEach(e => {
+        catCounts[e.category] = (catCounts[e.category] || 0) + 1;
       });
+      const topFreqCat = Object.entries(catCounts).sort((a, b) => b[1] - a[1])[0];
+      if (topFreqCat) {
+        insights.push({
+          type: 'frequency',
+          icon: 'activity',
+          color: 'emerald',
+          badge: 'Top Frequency Category',
+          title: `${topFreqCat[0]}: ${topFreqCat[1]} Transactions`,
+          desc: `Most of your transaction activity concentrates in ${topFreqCat[0]}. Reviewing recurring payments in this bucket provides the fastest path to monthly savings.`
+        });
+      }
     }
 
     // Render cards with click support for micro spends
@@ -3022,33 +3067,47 @@
     console.log('Finlytics was installed successfully!');
   });
 
-  if (installAppOption) {
-    installAppOption.addEventListener('click', async () => {
-      if (moreMenuDropdown) moreMenuDropdown.classList.add('hidden');
-      if (deferredPrompt) {
-        try {
-          deferredPrompt.prompt();
-          const { outcome } = await deferredPrompt.userChoice;
+  // Header & Menu Install Button Listeners
+  const headerInstallBtn = document.getElementById('headerInstallBtn');
+
+  function triggerPWAInstall() {
+    if (deferredPrompt) {
+      try {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then(({ outcome }) => {
           if (outcome === 'accepted') {
-            installAppOption.classList.add('hidden');
+            if (headerInstallBtn) headerInstallBtn.classList.add('hidden');
+            if (installAppOption) installAppOption.classList.add('hidden');
           }
           deferredPrompt = null;
-        } catch (err) {
-          console.warn('Install prompt error:', err);
-          showManualInstallGuide();
-        }
-      } else {
+        });
+      } catch (err) {
+        console.warn('Install error:', err);
         showManualInstallGuide();
       }
+    } else {
+      showManualInstallGuide();
+    }
+  }
+
+  if (headerInstallBtn) {
+    headerInstallBtn.addEventListener('click', triggerPWAInstall);
+  }
+
+  if (installAppOption) {
+    installAppOption.addEventListener('click', () => {
+      if (moreMenuDropdown) moreMenuDropdown.classList.add('hidden');
+      triggerPWAInstall();
     });
   }
 
   function showManualInstallGuide() {
     alert(
-      "📱 To Install Finlytics App on Android:\n\n" +
+      "📱 Install Finlytics on Android 16 / Chrome:\n\n" +
       "1. Tap Chrome's Top-Right 3-Dots (⋮) Menu\n" +
-      "2. Tap 'Add to Home screen' or 'Install app'\n\n" +
-      "Tip: If you see 'Could not open app', long-press and uninstall any older Finlytics icon first!"
+      "2. Select 'Install app' or 'Add to Home screen'\n" +
+      "3. Tap 'Install' on the popup dialog!\n\n" +
+      "💡 Pro-Tip: If you previously installed an older version, remove/uninstall the old icon from your home screen first."
     );
   }
 
