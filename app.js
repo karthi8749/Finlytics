@@ -825,6 +825,147 @@
         }
       }
     }
+
+    // --- Metric 3C: AI Financial Advisor & Savings Insights ---
+    renderAISpendingInsights(filteredList);
+  }
+
+  // Smart Engine to produce high-value actionable financial advice & leak detection
+  function renderAISpendingInsights(filteredList) {
+    const aiGrid = document.getElementById('aiInsightsGrid');
+    if (!aiGrid) return;
+
+    if (!filteredList || filteredList.length === 0) {
+      aiGrid.innerHTML = `
+        <div class="col-span-full py-4 text-center text-xs text-slate-400 bg-slate-900/40 rounded-xl border border-slate-800">
+          Add or import transactions to activate AI financial analysis & savings recommendations.
+        </div>
+      `;
+      return;
+    }
+
+    const totalSpent = filteredList.reduce((acc, c) => acc + (c.amount || 0), 0);
+    const insights = [];
+
+    // 1. Food & Dining / Delivery Leak Detection
+    const foodItems = filteredList.filter(e => e.category === 'Food & Dining' || /swiggy|zomato|eats|kfc|mcdonald/i.test(e.title || ''));
+    const foodSum = foodItems.reduce((s, e) => s + e.amount, 0);
+    const foodPct = totalSpent > 0 ? (foodSum / totalSpent) * 100 : 0;
+
+    if (foodPct >= 25 && foodSum > 1500) {
+      insights.push({
+        type: 'leak',
+        icon: 'utensils',
+        color: 'rose',
+        badge: 'Food Spending Alert',
+        title: `High Dining & Delivery (${foodPct.toFixed(0)}%)`,
+        desc: `You spent ${formatINR(foodSum)} across ${foodItems.length} transactions. Cooking at home 2 more days/week can save around ~${formatINR(foodSum * 0.35)}/month.`
+      });
+    }
+
+    // 2. Micro-Transactions / Small Leaks (transactions <= ₹200)
+    const microItems = filteredList.filter(e => e.amount <= 200 && e.amount > 0);
+    const microSum = microItems.reduce((s, e) => s + e.amount, 0);
+    if (microItems.length >= 8 && microSum > 800) {
+      insights.push({
+        type: 'micro',
+        icon: 'coffee',
+        color: 'amber',
+        badge: 'Small Purchases Leak',
+        title: `${microItems.length} Micro-Spends Found`,
+        desc: `Quick spends under ₹200 totaled ${formatINR(microSum)}. These silent transactions add up fast without notice.`
+      });
+    }
+
+    // 3. Top Merchant Dominance
+    const merchantMap = {};
+    filteredList.forEach(e => {
+      const m = (e.title || 'Other').trim();
+      merchantMap[m] = (merchantMap[m] || 0) + e.amount;
+    });
+    const sortedM = Object.entries(merchantMap).sort((a, b) => b[1] - a[1]);
+    if (sortedM.length > 0) {
+      const [topM, topMAmt] = sortedM[0];
+      const mPct = totalSpent > 0 ? (topMAmt / totalSpent) * 100 : 0;
+      if (mPct >= 30 && totalSpent > 2000) {
+        insights.push({
+          type: 'dominance',
+          icon: 'target',
+          color: 'blue',
+          badge: 'Top Payee Concentration',
+          title: `${topM} took ${mPct.toFixed(0)}% of funds`,
+          desc: `${formatINR(topMAmt)} went to a single payee. Monitor recurring transfers or consolidate vendor payments.`
+        });
+      }
+    }
+
+    // 4. UPI vs Card Cashflow Health
+    const upiSpent = filteredList.filter(e => e.paymentMode === 'UPI').reduce((s, e) => s + e.amount, 0);
+    const upiPct = totalSpent > 0 ? (upiSpent / totalSpent) * 100 : 0;
+    if (upiPct >= 75 && totalSpent > 3000) {
+      insights.push({
+        type: 'payment',
+        icon: 'smartphone',
+        color: 'emerald',
+        badge: 'Cashflow Optimization',
+        title: `Heavy UPI Usage (${upiPct.toFixed(0)}%)`,
+        desc: `Almost all spends (${formatINR(upiSpent)}) are debiting directly via UPI. Paying utility/bills via credit card can earn cashback and keep savings in bank interest longer.`
+      });
+    }
+
+    // 5. Positive Savings Achievement
+    if (monthlyBudget > 0 && totalSpent < (monthlyBudget * 0.75)) {
+      const savedProjected = monthlyBudget - totalSpent;
+      insights.push({
+        type: 'positive',
+        icon: 'piggy-bank',
+        color: 'emerald',
+        badge: 'Savings Milestone',
+        title: `Under Target Budget!`,
+        desc: `You are maintaining a strong buffer with ${formatINR(savedProjected)} remaining under limit. Recommended: Allocate 50% to mutual funds or emergency fund.`
+      });
+    }
+
+    // Fallback if very few conditions matched
+    if (insights.length < 3) {
+      insights.push({
+        type: 'general',
+        icon: 'sparkles',
+        color: 'indigo',
+        badge: 'Smart Budget Rule',
+        title: '50-30-20 Financial Rule',
+        desc: 'Aim for 50% Essentials (Rent, Groceries, Bills), 30% Wants (Dining, Shopping), and 20% Direct Wealth Savings.'
+      });
+    }
+
+    // Render cards
+    aiGrid.innerHTML = insights.slice(0, 3).map(item => {
+      const colorMap = {
+        rose: { bg: 'bg-rose-500/10 border-rose-500/20 text-rose-400', badge: 'bg-rose-500/20 text-rose-300' },
+        amber: { bg: 'bg-amber-500/10 border-amber-500/20 text-amber-400', badge: 'bg-amber-500/20 text-amber-300' },
+        blue: { bg: 'bg-blue-500/10 border-blue-500/20 text-blue-400', badge: 'bg-blue-500/20 text-blue-300' },
+        emerald: { bg: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400', badge: 'bg-emerald-500/20 text-emerald-300' },
+        indigo: { bg: 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400', badge: 'bg-indigo-500/20 text-indigo-300' }
+      };
+      const theme = colorMap[item.color] || colorMap.indigo;
+
+      return `
+        <div class="p-3.5 rounded-xl bg-slate-900/60 dark:bg-slate-900/90 border ${theme.bg} backdrop-blur-sm flex flex-col justify-between space-y-2 hover:border-emerald-500/40 transition">
+          <div class="space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${theme.badge}">
+                ${item.badge}
+              </span>
+              <i data-lucide="${item.icon}" class="w-4 h-4 ${theme.bg.split(' ')[2]}"></i>
+            </div>
+            <h4 class="text-xs font-bold text-slate-100">${item.title}</h4>
+            <p class="text-[11px] text-slate-300/90 leading-relaxed">${item.desc}</p>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    if (window.lucide) lucide.createIcons();
   }
 
   // --- Render Expense Table & Mobile Cards ---
