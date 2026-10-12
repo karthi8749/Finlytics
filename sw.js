@@ -1,5 +1,5 @@
 // Finlytics Service Worker
-const CACHE_NAME = 'finlytics-v14';
+const CACHE_NAME = 'finlytics-v16';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -33,15 +33,20 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+// Network-first with cache fallback for instant live updates
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      return cachedResponse || fetch(event.request).then((networkResponse) => {
+    fetch(event.request)
+      .then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200) {
+          const responseClone = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseClone);
+          });
+        }
         return networkResponse;
-      }).catch(() => {
-        return cachedResponse;
-      });
-    })
+      })
+      .catch(() => caches.match(event.request))
   );
 });

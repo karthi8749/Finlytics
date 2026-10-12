@@ -194,12 +194,84 @@
       if (stored) {
         expenses = JSON.parse(stored);
 
-        // One-time auto migration: Clean raw bank titles, strip trailing -- from notes, and fix categorization
+        // Master dictionary of verified full UPI narrations from statement
+        const FULL_STATEMENT_REFS = {
+          "624550290711": "UPI/CR/624550290711/S ABDUL /HDFC/abdulrazik/UPI",
+          "613344702349": "UPI/CR/613344702349/KARTHIKE/ CNRB/8925167668/Sent",
+          "661109666452": "UPI/DR/661109666452/PRABAKA R/KVBL/962653329@/UPI",
+          "625000509375": "UPI/DR/625000509375/sbipmopa/ SBIP/sbipmopad./UPI",
+          "215270449970": "UPI/CR/215270449970/KARTHIKE/ CNRB/8925167668/Sent",
+          "625261993867": "UPI/DR/625261993867/PRABAKA R/KVBL/962653329@/UPI",
+          "661885194962": "UPI/DR/661885194962/HYGREVA R/YESB/paytmqr6bt/UPI",
+          "625301370066": "UPI/DR/625301370066/Sip N Go/YESB/q882481359/UPI",
+          "661979076110": "UPI/DR/661979076110/HYGREVA R/YESB/paytmqr6bt/UPI",
+          "314410333659": "UPI/CR/314410333659/KARTHIKE/ CNRB/8925167668/Sent",
+          "650467807718": "UPI/DR/650467807718/IRCTC Ti/UTIB/pinelabs.1/Pay",
+          "662055371202": "UPI/DR/662055371202/MURALI D/YESB/paytmqr6t9/UPI",
+          "662107939985": "UPI/DR/662107939985/dhanasek/ IOBA/dhanasekar/UPI",
+          "625684957127": "UPI/DR/625684957127/Susila P/YESB/paytmqr5ym/UPI",
+          "662220650278": "UPI/DR/662220650278/HYGREVA R/YESB/paytmqr6bt/UPI",
+          "614072365922": "UPI/CR/614072365922/KARTHIKE/ CNRB/8925167668/Sent",
+          "662306084913": "UPI/DR/662306084913/PRABAKA R/KVBL/962653329@/UPI",
+          "662409905256": "UPI/DR/662409905256/HYGREVA R/YESB/paytmqr6bt/UPI",
+          "626089016377": "UPI/CR/626089016377/VIDHYA N/ICIC/vidhyanith/UPI",
+          "662689719627": "UPI/CR/662689719627/JOE SACH/HDFC/joesachin1/UPI",
+          "662763360596": "UPI/DR/662763360596/RAJA SHA/AIRP/rajashakir/Paym",
+          "614478938888": "UPI/CR/614478938888/KARTHIKE/ CNRB/8925167668/Sent",
+          "626390676912": "UPI/DR/626390676912/PRABAKA R/KVBL/962653329@/UPI",
+          "216496342148": "UPI/CR/216496342148/KARTHIKE/CNRB/8925167668/Sent",
+          "315626989405": "UPI/CR/315626989405/KARTHIKE/ CNRB/8925167668/Sent",
+          "663660767328": "UPI/DR/663660767328/Indian R/SBIN/railsbiupi/UPI",
+          "663661276826": "UPI/DR/663661276826/Mrs RIMA/CBIN/7970359560/UPI",
+          "663606394863": "UPI/DR/663606394863/KANAGA R/UTIB/gpay-11256/UPI",
+          "663617294258": "UPI/DR/663617294258/Vasantha/ YESB/q532636719/UPI",
+          "663646006869": "UPI/DR/663646006869/sbipmopa/SBIP/sbipmopad./UPI",
+          "627173257039": "UPI/CR/627173257039/KARTHIKE/ HDFC/8925167668/UPI",
+          "663708363083": "UPI/DR/663708363083/VIDHYA N/ICIC/vidhyanith/UPI",
+          "663708163353": "UPI/DR/663708163353/JOE SACH/CNRB/joesachin1/UPI",
+          "663705865309": "UPI/DR/663705865309/S ABDUL /HDFC/abdulrazik/UPI",
+          "627173530896": "UPI/CR/627173530896/KARTHIKE/ HDFC/8925167668/UPI",
+          "663751699934": "UPI/DR/663751699934/JOE SACH/CNRB/joesachin1/UPI",
+          "627244393979": "UPI/DR/627244393979/BOTTLE L/UTIB/pinelabs.1/UPI",
+          "627262533760": "UPI/DR/627262533760/BOTTLE L/INDB/bottlelabt/UPII",
+          "663858216553": "UPI/DR/663858216553/NELLAI A/YESB/paytm.s2f5/UPI",
+          "627236749575": "UPI/DR/627236749575/Thesmart q1/AIRP/thesmartq1/UP",
+          "627256372683": "UPI/DR/627256372683/HYGREVA R/YESB/paytmqr6bt/UPI",
+          "627293284653": "UPI/DR/627293284653/Meesai H/YESB/q838447303/UPI",
+          "663805343921": "UPI/DR/663805343921/GODWIN L/HDFC/godwinlasa/UPI",
+          "663951502009": "UPI/DR/663951502009/Thesmart q1/AIRP/thesmartq1/UP",
+          "663904276744": "UPI/DR/663904276744/Mr Mohammed/YESB/paytmqr6ng/UPI",
+          "663940785779": "UPI/DR/663940785779/HungerBox/YESB/paytm-8774/UPI",
+          "663955398910": "UPI/DR/663955398910/18457 Ap/YESB/paytm.d195/UPI",
+          "663902855506": "UPI/DR/663902855506/Thesmart q1/AIRP/thesmartq1/UP",
+          "663921557852": "UPI/DR/663921557852/Allu Dur/YESB/paytm.s1iw/UPI",
+          "663984669080": "UPI/DR/663984669080/SWEETY H/YESB/q728991431/UPI",
+          "663979246860": "UPI/DR/663979246860/KALA FRUITS/YESB/q900014425/UPI",
+          "627335144120": "UPI/DR/627335144120/Reeta/YESB/paytm.s1ee/UPI"
+        };
+
+        // One-time auto migration: Clean raw bank titles, restore complete multi-line narration, strip trailing -- and fix categorization
         let migrated = false;
         expenses.forEach(e => {
           if (!e.notes) e.notes = e.title;
 
-          // Strip trailing dash placeholders from notes e.g. " - -" or " --"
+          // Check if this expense has an associated 10-12 digit UPI reference
+          const textToSearch = (e.notes + ' ' + (e.title || ''));
+          const refMatch = textToSearch.match(/\b(6\d{11}|2\d{11}|3\d{11})\b/);
+          if (refMatch && FULL_STATEMENT_REFS[refMatch[1]]) {
+            const fullNarration = FULL_STATEMENT_REFS[refMatch[1]];
+            if (e.notes !== fullNarration) {
+              e.notes = fullNarration;
+              migrated = true;
+            }
+            const fullTitle = cleanMerchantTitle(fullNarration);
+            if (fullTitle && e.title !== fullTitle) {
+              e.title = fullTitle;
+              migrated = true;
+            }
+          }
+
+          // Strip trailing dash placeholders from notes e.g. " - -" or " --" or " -"
           if (e.notes) {
             const cleanNotes = e.notes.replace(/\s*-\s*-+\s*$/g, '').trim();
             if (cleanNotes !== e.notes) {
@@ -1768,7 +1840,7 @@
       let extra = sbiSlashUpiMatch[2] ? sbiSlashUpiMatch[2].replace(/\s*-\s*-+\s*$/g, '').trim() : '';
 
       // Ignore known bank codes or generic status
-      const bankCodes = /^(YES|HDFC|ICICI|SBI|SBIN|AXIS|UTIB|BARB|KKBK|PUNB|CNRB|PAYTM|AIRP|DR|CR)$/i;
+      const bankCodes = /^(YES|YESB|HDFC|ICICI|SBI|SBIN|AXIS|UTIB|BARB|KKBK|PUNB|CNRB|PAYTM|AIRP|DR|CR)$/i;
       if (extra && !bankCodes.test(extra) && isNaN(extra)) {
         candidate = candidate + ' (' + extra + ')';
       }
