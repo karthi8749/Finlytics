@@ -2531,23 +2531,53 @@
     });
   }
 
+  // Always show Install App option in the 3-dots menu for mobile users
+  if (installAppOption) {
+    installAppOption.classList.remove('hidden');
+  }
+
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e;
-    installAppOption.classList.remove('hidden');
-  });
-
-  installAppOption.addEventListener('click', async () => {
-    moreMenuDropdown.classList.add('hidden');
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === 'accepted') {
-        installAppOption.classList.add('hidden');
-      }
-      deferredPrompt = null;
+    if (installAppOption) {
+      installAppOption.classList.remove('hidden');
     }
   });
+
+  window.addEventListener('appinstalled', () => {
+    deferredPrompt = null;
+    console.log('Finlytics was installed successfully!');
+  });
+
+  if (installAppOption) {
+    installAppOption.addEventListener('click', async () => {
+      if (moreMenuDropdown) moreMenuDropdown.classList.add('hidden');
+      if (deferredPrompt) {
+        try {
+          deferredPrompt.prompt();
+          const { outcome } = await deferredPrompt.userChoice;
+          if (outcome === 'accepted') {
+            installAppOption.classList.add('hidden');
+          }
+          deferredPrompt = null;
+        } catch (err) {
+          console.warn('Install prompt error:', err);
+          showManualInstallGuide();
+        }
+      } else {
+        showManualInstallGuide();
+      }
+    });
+  }
+
+  function showManualInstallGuide() {
+    alert(
+      "📱 To Install Finlytics App on Android:\n\n" +
+      "1. Tap Chrome's Top-Right 3-Dots (⋮) Menu\n" +
+      "2. Tap 'Add to Home screen' or 'Install app'\n\n" +
+      "Tip: If you see 'Could not open app', long-press and uninstall any older Finlytics icon first!"
+    );
+  }
 
   // --- App Bootstrap ---
   loadData();
