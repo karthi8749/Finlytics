@@ -1282,7 +1282,7 @@
       const catIcon = CATEGORY_ICONS[item.category] || '📦';
       const fullTooltip = (item.notes && item.notes.length > item.title.length ? item.notes : `${item.title}${item.notes ? ' — ' + item.notes : ''}`).replace(/"/g, '&quot;');
       return `
-        <div class="bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 flex items-start justify-between gap-3 shadow-sm group" title="${fullTooltip}">
+        <div class="bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 flex items-start justify-between gap-3 shadow-sm group" title="${fullTooltip}">
           <div class="flex items-start gap-3 min-w-0 cursor-pointer flex-1" onclick="window.viewTxnDetails('${item.id}')">
             <div class="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0 mt-0.5" style="background-color: ${catColor}15;">
               ${catIcon}
