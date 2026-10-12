@@ -1506,32 +1506,36 @@
   function categorizeTransaction(narration) {
     const text = (narration || '').toLowerCase();
     
-    // Food & Dining
-    if (/swiggy|zomato|mcdonald|kfc|domino|starbucks|pizza|burger|cafe|tea|coffee|restaurant|hotel|baker|dhaba|eats|biryani|subway|iyankar|bakery|mess|hotel|canteen|food/.test(text)) {
-      return 'Food & Dining';
+    // Bank Charges & AMC
+    if (/amc|charges|annual maintenance|minimum balance|sms alert|service charge|chg|penal/i.test(text)) {
+      return 'Bills & Utilities';
     }
-    // Groceries
-    if (/blinkit|zepto|instamart|bigbasket|supermarket|dmart|reliance fresh|spencer|provision|vegetable|fruit|dairy|milk|kirana|nilgiris|hygrevar|store|market|grocer/.test(text)) {
+    // Groceries & Supermarkets
+    if (/blinkit|zepto|instamart|bigbasket|supermarket|super market|dmart|reliance fresh|spencer|provision|vegetable|fruit|dairy|milk|kirana|nilgiris|hygreva|hygrevar|store|market|grocer|mart/i.test(text)) {
       return 'Groceries';
     }
+    // Food & Dining
+    if (/swiggy|zomato|mcdonald|kfc|domino|starbucks|pizza|burger|cafe|tea|coffee|restaurant|hotel|baker|dhaba|eats|biryani|subway|iyankar|bakery|mess|canteen|food|sweets|juice|tiffin|bhavan|annapoorna/i.test(text)) {
+      return 'Food & Dining';
+    }
     // Travel & Fuel
-    if (/irctc|railway|train|ticket|petrol|fuel|hpcl|bpcl|iocl|shell|uber|ola|rapido|makemytrip|indigo|air india|fastag|toll|parking|metro|flight/.test(text)) {
+    if (/irctc|railway|train|ticket|petrol|fuel|hpcl|bpcl|iocl|shell|uber|ola|rapido|makemytrip|indigo|air india|fastag|toll|parking|metro|flight/i.test(text)) {
       return 'Travel & Fuel';
     }
     // Bills & Utilities
-    if (/bescom|tneb|electricity|airtel|jio|vodafone|vi|broadband|wifi|water|gas|indane|bharat gas|billdesk|recharge|dth|tata play|lic|insurance|rent|interest/.test(text)) {
+    if (/bescom|tneb|electricity|airtel|jio|vodafone|vi|broadband|wifi|water|gas|indane|bharat gas|billdesk|recharge|dth|tata play|lic|insurance|rent|interest/i.test(text)) {
       return 'Bills & Utilities';
     }
     // Shopping
-    if (/rmkv|fabrics|textile|silks|clothing|apparel|amazon|flipkart|myntra|ajio|zara|h&m|decathlon|croma|reliance digital|meesho|nykaa|shoppers stop|lifestyle|westside|cloth|fashion/.test(text)) {
+    if (/rmkv|fabrics|textile|silks|clothing|apparel|amazon|flipkart|myntra|ajio|zara|h&m|decathlon|croma|reliance digital|meesho|nykaa|shoppers stop|lifestyle|westside|cloth|fashion/i.test(text)) {
       return 'Shopping';
     }
     // Entertainment
-    if (/netflix|spotify|hotstar|prime|youtube|cinema|pvr|inox|bookmyshow|game|playstation|disney|theatre/.test(text)) {
+    if (/netflix|spotify|hotstar|prime|youtube|cinema|pvr|inox|bookmyshow|game|playstation|disney|theatre/i.test(text)) {
       return 'Entertainment';
     }
     // Health
-    if (/apollo|pharmacy|medplus|netmeds|1mg|hospital|clinic|doctor|lab|diagnostic|practo|dentist|healthcare|medlife/.test(text)) {
+    if (/apollo|pharmacy|medplus|netmeds|1mg|hospital|clinic|doctor|lab|diagnostic|practo|dentist|healthcare|medlife/i.test(text)) {
       return 'Health';
     }
     return 'Others';
@@ -1559,14 +1563,24 @@
     if (!narration) return 'Expense';
     let s = narration.trim();
 
-    // Specific SBI UPI Formats:
+    // SBI UPI Slash Format (Very Common in SBI Statements):
+    // E.g. "UPI/DR/663617294258/Vasantha/..."
+    // E.g. "UPI/DR/663606394863/KANAGA/..."
+    // E.g. "UPI/DR/663661276826/Mrs/..."
+    // E.g. "UPI/DR/662409905256/HYGREVA/..."
+    const sbiSlashUpiMatch = s.match(/UPI\/(?:DR|CR)\/\d+\/([^\/]+)/i);
+    if (sbiSlashUpiMatch && sbiSlashUpiMatch[1]) {
+      let candidate = sbiSlashUpiMatch[1].trim();
+      if (candidate.length >= 2) {
+        return candidate.length > 30 ? candidate.substring(0, 30) : candidate;
+      }
+    }
+
+    // Specific SBI UPI Hyphen Formats:
     // E.g. "UPI-IRCTC TICKETING-PINELABS.11093315@PINEAXIS-UTIB000SETU-..."
     // E.g. "UPI-RMKV FABRICS PRIVATE-RMKVFABRICSPRIVATELT..."
     // E.g. "UPI-HYGREVAR SUPER MARKE-PAYTMQR6BTVVW5@P..."
     // E.g. "UPI-SRI LAKSHMI IYANKAR -LAKSHMIIYAN@TMB..."
-    // E.g. "UPI-VARADHARAJ-Q366713789@YBL..."
-    // E.g. "UPI-KARTHIKEYAN M-MURUGANKARTHIKEYAN8749@OKSBI..."
-
     const sbiUpiPattern = /^UPI-([A-Za-z0-9\s&._-]+?)(?:-(?:[A-Za-z0-9._-]+@[A-Za-z0-9._-]+|[A-Za-z0-9]{10,}))/i;
     const sbiMatch = s.match(sbiUpiPattern);
     if (sbiMatch && sbiMatch[1]) {
@@ -1580,7 +1594,7 @@
     const upiMatch = s.match(/UPI(?:\/|-)([A-Za-z0-9\s&._-]+?)(?:\/|-|@)/i);
     if (upiMatch && upiMatch[1]) {
       let candidate = upiMatch[1].trim();
-      if (candidate.length > 2 && !/^\d+$/.test(candidate)) {
+      if (candidate.length > 2 && !/^\d+$/.test(candidate) && !/^(DR|CR)$/i.test(candidate)) {
         return candidate.length > 30 ? candidate.substring(0, 30) : candidate;
       }
     }
@@ -1590,6 +1604,14 @@
     if (posMatch && posMatch[1]) {
       return posMatch[1].trim();
     }
+
+    // ATM / Bank Charges
+    if (/atm\s+pending\s+amc|annual\s+maintenance|card\s+amc/i.test(s)) {
+      return 'SBI Debit Card AMC Charge';
+    }
+
+    // Strip date prefixes e.g. "27 09 2026 " or "27/09/2026 "
+    s = s.replace(/^\d{1,2}[\s/-]\d{1,2}[\s/-]\d{2,4}\s+/, '');
 
     // Strip long reference numbers and bank codes
     s = s.replace(/[\d]{8,}/g, '')
