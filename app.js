@@ -328,6 +328,7 @@
     kpiBudgetMessage.innerHTML = `
       <span>Target: ${formatINR(targetBudget)}</span>
       <span class="${pctUsed > 100 ? 'text-rose-500 font-bold' : ''}">${pctUsed.toFixed(1)}% used</span>
+      <span id="kpiBurnRateEstimate" class="hidden"></span>
     `;
 
     // Daily Average & Projected Spend
@@ -438,11 +439,11 @@
     const kpiVelocityBadge = document.getElementById('kpiVelocityBadge');
     const kpiBurnRateEstimate = document.getElementById('kpiBurnRateEstimate');
 
-    if (kpiVelocityBadge && kpiBurnRateEstimate) {
+    if (kpiVelocityBadge) {
       if (targetBudget <= 0) {
         kpiVelocityBadge.textContent = 'No Limit Set';
         kpiVelocityBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400';
-        kpiBurnRateEstimate.textContent = 'Set monthly budget';
+        if (kpiBurnRateEstimate) kpiBurnRateEstimate.textContent = 'Set monthly budget';
       } else {
         // How many days left in the month
         const daysLeft = Math.max(1, daysInPeriod - daysPassed);
@@ -451,7 +452,7 @@
         if (remainingBudget <= 0) {
           kpiVelocityBadge.textContent = 'Budget Exceeded 🔥';
           kpiVelocityBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-500';
-          kpiBurnRateEstimate.textContent = `Over limit by ${formatINR(Math.abs(remainingBudget))}`;
+          if (kpiBurnRateEstimate) kpiBurnRateEstimate.textContent = `Over limit by ${formatINR(Math.abs(remainingBudget))}`;
         } else {
           const burnDaysLeft = dailyAvg > 0 ? (remainingBudget / dailyAvg) : 999;
 
@@ -459,11 +460,11 @@
             const outDate = Math.min(daysInPeriod, Math.round(daysPassed + burnDaysLeft));
             kpiVelocityBadge.textContent = `Fast Burn Rate ⚡`;
             kpiVelocityBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400';
-            kpiBurnRateEstimate.textContent = `Exhausts around day ${outDate}`;
+            if (kpiBurnRateEstimate) kpiBurnRateEstimate.textContent = `Exhausts around day ${outDate}`;
           } else {
             kpiVelocityBadge.textContent = `Safe Pace 🛡️`;
             kpiVelocityBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400';
-            kpiBurnRateEstimate.textContent = `Safe: ₹${(remainingBudget / daysLeft).toFixed(0)}/day left`;
+            if (kpiBurnRateEstimate) kpiBurnRateEstimate.textContent = `Safe: ₹${(remainingBudget / daysLeft).toFixed(0)}/day left`;
           }
         }
       }
@@ -1171,15 +1172,19 @@
   });
 
   // --- Budget Modal Logic ---
-  setBudgetOption.addEventListener('click', () => {
-    budgetInput.value = monthlyBudget;
-    budgetModal.classList.remove('hidden');
-    moreMenuDropdown.classList.add('hidden');
-    budgetInput.focus();
-  });
+  function openBudgetModal() {
+    if (budgetModal) {
+      budgetInput.value = monthlyBudget;
+      budgetModal.classList.remove('hidden');
+      if (moreMenuDropdown) moreMenuDropdown.classList.add('hidden');
+      budgetInput.focus();
+    }
+  }
+
+  setBudgetOption.addEventListener('click', openBudgetModal);
 
   function closeBudgetModal() {
-    budgetModal.classList.add('hidden');
+    if (budgetModal) budgetModal.classList.add('hidden');
   }
 
   closeBudgetModalBtn.addEventListener('click', closeBudgetModal);
@@ -2501,7 +2506,7 @@
     mobileNavImportBtn.addEventListener('click', openImportModal);
   }
   if (mobileNavAddBtn) {
-    mobileNavAddBtn.addEventListener('click', openModal);
+    mobileNavAddBtn.addEventListener('click', openAddModal);
   }
   if (mobileNavSyncBtn) {
     mobileNavSyncBtn.addEventListener('click', openSyncModal);
