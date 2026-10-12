@@ -70,9 +70,14 @@
   ];
 
   // --- State ---
+  const STORAGE_KEY_EXCLUDE_BILLS = 'finlytics_exclude_bills_v1';
+  const STORAGE_KEY_SALARY_CYCLE = 'finlytics_salary_cycle_v1';
+
   let expenses = [];
   let monthlyBudget = 35000; // Default ₹35,000 target
-  let selectedMonth = 'all'; // 'all' or 'YYYY-MM'
+  let excludeFixedBills = localStorage.getItem(STORAGE_KEY_EXCLUDE_BILLS) !== 'false'; // default true
+  let salaryCycleStartDay = parseInt(localStorage.getItem(STORAGE_KEY_SALARY_CYCLE) || '26', 10); // default 26th
+  let selectedMonth = 'all'; // 'all' or 'YYYY-MM' or 'YYYY-MM-DD_YYYY-MM-DD'
   let selectedCategory = 'all';
   let searchQuery = '';
   let deferredPrompt = null;
@@ -91,6 +96,9 @@
   const kpiBudgetMessage = document.getElementById('kpiBudgetMessage');
   const kpiDailyAvg = document.getElementById('kpiDailyAvg');
   const kpiProjectedTotal = document.getElementById('kpiProjectedTotal');
+  const toggleExcludeFixedBillsBtn = document.getElementById('toggleExcludeFixedBillsBtn');
+  const excludeBillsBadgeText = document.getElementById('excludeBillsBadgeText');
+  const kpiGrossAvgSubtext = document.getElementById('kpiGrossAvgSubtext');
   const kpiTopCategory = document.getElementById('kpiTopCategory');
   const kpiTopCategoryAmount = document.getElementById('kpiTopCategoryAmount');
   const peakDayLabel = document.getElementById('peakDayLabel');
@@ -131,6 +139,7 @@
   const cancelBudgetBtn = document.getElementById('cancelBudgetBtn');
   const saveBudgetBtn = document.getElementById('saveBudgetBtn');
   const budgetInput = document.getElementById('budgetInput');
+  const salaryCycleStartDayInput = document.getElementById('salaryCycleStartDayInput');
 
   const exportCsvOption = document.getElementById('exportCsvOption');
   const backupJsonOption = document.getElementById('backupJsonOption');
@@ -310,6 +319,16 @@
       if (storedBudget) {
         monthlyBudget = Number(storedBudget) || 35000;
       }
+
+      const storedCycle = localStorage.getItem(STORAGE_KEY_SALARY_CYCLE);
+      if (storedCycle) {
+        salaryCycleStartDay = parseInt(storedCycle, 10) || 26;
+      }
+
+      const storedExcludeBills = localStorage.getItem(STORAGE_KEY_EXCLUDE_BILLS);
+      if (storedExcludeBills !== null) {
+        excludeFixedBills = storedExcludeBills !== 'false';
+      }
     } catch (e) {
       console.error('Failed to load data:', e);
       expenses = [...DEFAULT_SAMPLE_DATA];
@@ -327,24 +346,108 @@
   function saveBudget() {
     try {
       localStorage.setItem(STORAGE_KEY_BUDGET, monthlyBudget.toString());
+      localStorage.setItem(STORAGE_KEY_SALARY_CYCLE, salaryCycleStartDay.toString());
+      localStorage.setItem(STORAGE_KEY_EXCLUDE_BILLS, excludeFixedBills.toString());
     } catch (e) {
-      console.error('Failed to save budget:', e);
+      console.error('Failed to save budget settings:', e);
+    }
+  }
+
+  // Helper: check if transaction is fixed rent or bills
+  function isFixedBillOrRent(item) {
+    if (!item) return false;
+    const cat = (item.category || '').toLowerCase();
+    if (cat.includes('rent') || cat.includes('bills & utilities') || cat === 'housing') return true;
+    const text = `${item.title || ''} ${item.notes || ''}`.toLowerCase();
+    const keywords = ['rent', 'house rent', 'room rent', 'pg rent', 'electricity', 'tneb', 'bescom', 'broadband', 'wifi', 'gas cylinder', 'maintenance', 'water bill', 'eb bill'];
+    return keywords.some(k => text.includes(k));
+  }
+
+  // Helper: Format date range for Salary Cycle
+  function formatCycleLabel(startStr, endStr) {
+    try {
+      const s = new Date(startStr);
+      const e = new Date(endStr);
+      const sDay = s.getDate();
+      const sMon = s.toLocaleDateString('en-IN', { month: 'short' });
+      const eDay = e.getDate();
+      const eMon = e.toLocaleDateString('en-IN', { month: 'short' });
+      const yr = e.getFullYear();
+      return `${sDay} ${sMon} – ${eDay} ${eMon} ${yr}`;
+    } catch (err) {
+      return `${startStr} to ${endStr}`;
     }
   }
 
   // --- Unique Month Aggregates ---
   function getAvailableMonths() {
-    const monthSet = new Set();
+    if (salaryCycleStartDay === 1) {
+      // Standard Calendar Months
+      const monthSet = new Set();
+      expenses.forEach((item) => {
+        if (item.date && item.date.length >= 7) {
+          monthSet.add(item.date.substring(0, 7)); // 'YYYY-MM'
+        }
+      });
+      return Array.from(monthSet).sort().reverse();
+    }
+
+    // Salary Billing Cycles (e.g. 26th to 25th)
+    const cycleMap = new Map();
+    const cycleDay = salaryCycleStartDay;
+
     expenses.forEach((item) => {
-      if (item.date && item.date.length >= 7) {
-        monthSet.add(item.date.substring(0, 7)); // 'YYYY-MM'
+      if (!item.date || item.date.length < 10) return;
+      const d = new Date(item.date);
+      if (isNaN(d)) return;
+
+      const y = d.getFullYear();
+      const m = d.getMonth(); // 0-indexed
+      const dateNum = d.getDate();
+
+      let cycleStart, cycleEnd;
+      if (dateNum >= cycleDay) {
+        cycleStart = new Date(y, m, cycleDay);
+        // Ends on day before cycleDay next month
+        cycleEnd = new Date(y, m + 1, cycleDay - 1);
+      } else {
+        cycleStart = new Date(y, m - 1, cycleDay);
+        cycleEnd = new Date(y, m, cycleDay - 1);
+      }
+
+      const toISO = (dt) => {
+        const year = dt.getFullYear();
+        const month = String(dt.getMonth() + 1).padStart(2, '0');
+        const day = String(dt.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+
+      const startKey = toISO(cycleStart);
+      const endKey = toISO(cycleEnd);
+      const key = `${startKey}_${endKey}`;
+
+      if (!cycleMap.has(key)) {
+        cycleMap.set(key, {
+          key,
+          label: formatCycleLabel(startKey, endKey),
+          startTime: cycleStart.getTime()
+        });
       }
     });
-    return Array.from(monthSet).sort().reverse();
+
+    const sortedCycles = Array.from(cycleMap.values())
+      .sort((a, b) => b.startTime - a.startTime)
+      .map(c => c.key);
+
+    return sortedCycles;
   }
 
   function getMonthName(ym) {
-    if (!ym || ym === 'all') return 'All Months';
+    if (!ym || ym === 'all') return 'All Periods';
+    if (ym.includes('_')) {
+      const [start, end] = ym.split('_');
+      return formatCycleLabel(start, end);
+    }
     const [year, month] = ym.split('-');
     const date = new Date(Number(year), Number(month) - 1, 1);
     return date.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
@@ -358,16 +461,16 @@
     // "All Months" option
     const allBtn = document.createElement('button');
     allBtn.className = `w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-lg flex items-center justify-between ${selectedMonth === 'all' ? 'text-emerald-500 font-bold bg-emerald-500/10' : 'text-slate-700 dark:text-slate-200'}`;
-    allBtn.innerHTML = `<span>All Months</span> ${selectedMonth === 'all' ? '<i data-lucide="check" class="w-3.5 h-3.5"></i>' : ''}`;
+    allBtn.innerHTML = `<span>All Periods</span> ${selectedMonth === 'all' ? '<i data-lucide="check" class="w-3.5 h-3.5"></i>' : ''}`;
     allBtn.onclick = () => {
       selectedMonth = 'all';
-      selectedMonthLabel.textContent = 'All Months';
+      selectedMonthLabel.textContent = 'All Periods';
       monthDropdownMenu.classList.add('hidden');
       refreshView();
     };
     monthDropdownMenu.appendChild(allBtn);
 
-    // Each Month option
+    // Each Month / Cycle option
     months.forEach((ym) => {
       const btn = document.createElement('button');
       const isSelected = selectedMonth === ym;
@@ -388,9 +491,15 @@
   // --- Filter Logic ---
   function getFilteredExpenses() {
     return expenses.filter((item) => {
-      // Month Filter
+      // Period Filter
       if (selectedMonth !== 'all') {
-        if (!item.date || !item.date.startsWith(selectedMonth)) return false;
+        if (!item.date) return false;
+        if (selectedMonth.includes('_')) {
+          const [startStr, endStr] = selectedMonth.split('_');
+          if (item.date < startStr || item.date > endStr) return false;
+        } else {
+          if (!item.date.startsWith(selectedMonth)) return false;
+        }
       }
       // Category Filter
       if (selectedCategory !== 'all') {
@@ -439,10 +548,21 @@
       <span id="kpiBurnRateEstimate" class="hidden"></span>
     `;
 
+    // Calculate Fixed Rent & Bills in this filtered list
+    let fixedBillsAmount = 0;
+    filteredList.forEach(e => {
+      if (isFixedBillOrRent(e)) {
+        fixedBillsAmount += Number(e.amount) || 0;
+      }
+    });
+
+    const netSpent = Math.max(0, totalSpent - (excludeFixedBills ? fixedBillsAmount : 0));
+
     // Daily Average & Projected Spend
     let daysInPeriod = 30;
     let daysPassed = 1;
     const now = new Date();
+    const todayISO = now.toISOString().split('T')[0];
 
     if (selectedMonth === 'all') {
       const dates = filteredList.map(e => new Date(e.date)).filter(d => !isNaN(d));
@@ -451,8 +571,23 @@
         const maxD = new Date(Math.max(...dates));
         const diffDays = Math.max(1, Math.round((maxD - minD) / (1000 * 60 * 60 * 24)));
         daysPassed = diffDays;
+        daysInPeriod = diffDays;
       } else {
         daysPassed = 1;
+      }
+    } else if (selectedMonth.includes('_')) {
+      // Custom Salary Cycle: 'start_end'
+      const [startStr, endStr] = selectedMonth.split('_');
+      const sDate = new Date(startStr);
+      const eDate = new Date(endStr);
+      daysInPeriod = Math.max(1, Math.round((eDate - sDate) / (1000 * 60 * 60 * 24)) + 1);
+
+      if (todayISO < startStr) {
+        daysPassed = 1;
+      } else if (todayISO > endStr) {
+        daysPassed = daysInPeriod;
+      } else {
+        daysPassed = Math.max(1, Math.round((now - sDate) / (1000 * 60 * 60 * 24)) + 1);
       }
     } else {
       const [y, m] = selectedMonth.split('-').map(Number);
@@ -464,10 +599,32 @@
       }
     }
 
-    const dailyAvg = count > 0 ? (totalSpent / daysPassed) : 0;
-    kpiDailyAvg.textContent = formatINR(dailyAvg);
-    const projected = dailyAvg * daysInPeriod;
-    kpiProjectedTotal.textContent = `Projected: ${formatINR(projected)}`;
+    const netDailyAvg = count > 0 ? (netSpent / daysPassed) : 0;
+    const grossDailyAvg = count > 0 ? (totalSpent / daysPassed) : 0;
+
+    kpiDailyAvg.textContent = formatINR(netDailyAvg);
+    const projected = netDailyAvg * daysInPeriod;
+    kpiProjectedTotal.innerHTML = `<span>Projected: <strong class="text-slate-200 mono">${formatINR(projected)}</strong></span>`;
+
+    if (kpiGrossAvgSubtext) {
+      if (excludeFixedBills && fixedBillsAmount > 0) {
+        kpiGrossAvgSubtext.innerHTML = `<span>Gross: ${formatINR(grossDailyAvg)}/day <span class="text-emerald-400 font-semibold">(Saved ₹${Math.round(fixedBillsAmount).toLocaleString('en-IN')} rent/bills)</span></span>`;
+        kpiGrossAvgSubtext.classList.remove('hidden');
+      } else {
+        kpiGrossAvgSubtext.innerHTML = `<span>Gross Avg: ${formatINR(grossDailyAvg)}/day</span>`;
+      }
+    }
+
+    if (excludeBillsBadgeText) {
+      excludeBillsBadgeText.textContent = excludeFixedBills ? 'Excl. Rent/Bills' : 'All Expenses';
+      if (toggleExcludeFixedBillsBtn) {
+        if (excludeFixedBills) {
+          toggleExcludeFixedBillsBtn.className = 'text-[9px] px-2 py-0.5 rounded-full font-bold transition bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 active:scale-95 cursor-pointer';
+        } else {
+          toggleExcludeFixedBillsBtn.className = 'text-[9px] px-2 py-0.5 rounded-full font-bold transition bg-slate-500/15 text-slate-400 border border-slate-500/30 active:scale-95 cursor-pointer';
+        }
+      }
+    }
 
     // Top Category
     const catMap = {};
@@ -1184,21 +1341,28 @@
     microModalList.innerHTML = items.map(item => {
       const catColor = CATEGORY_COLORS[item.category] || '#10b981';
       const catIcon = CATEGORY_ICONS[item.category] || '📦';
-      const fullTooltip = (item.notes ? `${item.title} — ${item.notes}` : item.title).replace(/"/g, '&quot;');
+      const fullNarration = (item.notes && item.notes.trim().length > item.title.length ? item.notes : `${item.title}${item.notes && item.notes.trim() ? ' — ' + item.notes : ''}`);
 
       return `
-        <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 flex items-center justify-between gap-3 text-xs" title="${fullTooltip}">
-          <div class="flex items-center gap-2.5 min-w-0">
-            <span class="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-sm" style="background-color: ${catColor}20;">
+        <div onclick="window.navigateToExpense('${item.id}')" class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 hover:border-emerald-500/50 dark:hover:border-emerald-500/50 flex items-start justify-between gap-3 text-xs cursor-pointer transition active:scale-[0.98] group">
+          <div class="flex items-start gap-2.5 min-w-0 flex-1">
+            <span class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-sm mt-0.5" style="background-color: ${catColor}20;">
               ${catIcon}
             </span>
-            <div class="min-w-0">
-              <h5 class="font-bold text-slate-900 dark:text-white truncate">${item.title}</h5>
-              <div class="text-[10px] text-slate-400 flex items-center gap-1.5 mt-0.5">
+            <div class="min-w-0 flex-1">
+              <h5 class="font-bold text-slate-900 dark:text-white break-words group-hover:text-emerald-400 transition flex items-center gap-1.5">
+                <span>${item.title}</span>
+                <span class="text-[9px] text-amber-400 font-semibold px-1.5 py-0.2 rounded bg-amber-500/10 shrink-0">Tap to View &rarr;</span>
+              </h5>
+              <div class="text-[10px] text-slate-400 flex items-center gap-1.5 mt-0.5 flex-wrap">
                 <span>${formatDate(item.date)}</span>
                 <span>•</span>
                 <span class="text-slate-300">${item.paymentMode}</span>
-                ${item.notes ? `<span>•</span><span class="truncate max-w-[120px] text-slate-400">${item.notes}</span>` : ''}
+                <span>•</span>
+                <span class="text-emerald-400 font-medium">${item.category}</span>
+              </div>
+              <div class="text-[11px] text-slate-300/90 font-mono break-words leading-relaxed mt-1.5 p-1.5 rounded bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 select-text">
+                ${fullNarration}
               </div>
             </div>
           </div>
@@ -1212,6 +1376,23 @@
     microPurchasesModal.classList.remove('hidden');
     if (window.lucide) lucide.createIcons();
   }
+
+  // Navigate to an expense item from micro modal
+  window.navigateToExpense = function (id) {
+    closeMicroModal();
+    const rowEl = document.getElementById(`row_${id}`) || document.getElementById(`card_${id}`);
+    if (rowEl) {
+      rowEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      rowEl.classList.add('ring-2', 'ring-emerald-400', 'bg-emerald-500/10');
+      setTimeout(() => {
+        rowEl.classList.remove('ring-2', 'ring-emerald-400', 'bg-emerald-500/10');
+      }, 3000);
+    }
+    // Also trigger full details view modal
+    if (window.viewTxnDetails) {
+      window.viewTxnDetails(id);
+    }
+  };
 
   function closeMicroModal() {
     if (microPurchasesModal) microPurchasesModal.classList.add('hidden');
@@ -1239,7 +1420,7 @@
       const catIcon = CATEGORY_ICONS[item.category] || '📦';
       const fullTooltip = (item.notes && item.notes.length > item.title.length ? item.notes : `${item.title}${item.notes ? ' — ' + item.notes : ''}`).replace(/"/g, '&quot;');
       return `
-        <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition">
+        <tr id="row_${item.id}" class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition">
           <td class="py-3 px-4 text-slate-500 dark:text-slate-400 whitespace-nowrap">
             ${formatDate(item.date)}
           </td>
@@ -1282,7 +1463,7 @@
       const catIcon = CATEGORY_ICONS[item.category] || '📦';
       const fullTooltip = (item.notes && item.notes.length > item.title.length ? item.notes : `${item.title}${item.notes ? ' — ' + item.notes : ''}`).replace(/"/g, '&quot;');
       return `
-        <div class="bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 flex items-start justify-between gap-3 shadow-sm group" title="${fullTooltip}">
+        <div id="card_${item.id}" class="bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 flex items-start justify-between gap-3 shadow-sm group" title="${fullTooltip}">
           <div class="flex items-start gap-3 min-w-0 cursor-pointer flex-1" onclick="window.viewTxnDetails('${item.id}')">
             <div class="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0 mt-0.5" style="background-color: ${catColor}15;">
               ${catIcon}
@@ -1625,6 +1806,9 @@
   function openBudgetModal() {
     if (budgetModal) {
       budgetInput.value = monthlyBudget;
+      if (salaryCycleStartDayInput) {
+        salaryCycleStartDayInput.value = salaryCycleStartDay.toString();
+      }
       budgetModal.classList.remove('hidden');
       if (moreMenuDropdown) moreMenuDropdown.classList.add('hidden');
       budgetInput.focus();
@@ -1644,6 +1828,9 @@
     const val = parseFloat(budgetInput.value);
     if (!isNaN(val) && val >= 0) {
       monthlyBudget = val;
+      if (salaryCycleStartDayInput) {
+        salaryCycleStartDay = parseInt(salaryCycleStartDayInput.value, 10) || 26;
+      }
       saveBudget();
       closeBudgetModal();
       refreshView();
@@ -1651,6 +1838,15 @@
       alert('Please enter a valid monthly budget amount.');
     }
   });
+
+  // Toggle Exclude Fixed Rent & Bills listener
+  if (toggleExcludeFixedBillsBtn) {
+    toggleExcludeFixedBillsBtn.addEventListener('click', () => {
+      excludeFixedBills = !excludeFixedBills;
+      saveBudget();
+      refreshView();
+    });
+  }
 
   // --- Export CSV ---
   exportCsvOption.addEventListener('click', () => {

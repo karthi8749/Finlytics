@@ -230,19 +230,31 @@
         </div>
       </div>
 
-      <!-- Card 3: Daily Average -->
-      <div class="bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-4 sm:p-5 relative overflow-hidden shadow-sm">
-        <div class="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs font-semibold mb-2">
-          <span>Daily Average</span>
-          <div class="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-500 flex items-center justify-center">
-            <i data-lucide="calendar-clock" class="w-4 h-4"></i>
+      <!-- Card 3: Daily Average (Smart Exclude Rent & Fixed Bills) -->
+      <div class="bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-4 sm:p-5 relative overflow-hidden shadow-sm flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs font-semibold mb-2">
+            <span class="flex items-center gap-1.5">
+              <span>Daily Average</span>
+              <button id="toggleExcludeFixedBillsBtn" class="text-[9px] px-2 py-0.5 rounded-full font-bold transition bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 active:scale-95 cursor-pointer" title="Click to toggle Rent and Bills exclusion">
+                <span id="excludeBillsBadgeText">Excl. Rent/Bills</span>
+              </button>
+            </span>
+            <div class="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-500 flex items-center justify-center">
+              <i data-lucide="calendar-clock" class="w-4 h-4"></i>
+            </div>
+          </div>
+          <div class="text-xl sm:text-2xl lg:text-3xl font-extrabold mono text-slate-900 dark:text-white" id="kpiDailyAvg">
+            ₹0.00
           </div>
         </div>
-        <div class="text-xl sm:text-2xl lg:text-3xl font-extrabold mono text-slate-900 dark:text-white" id="kpiDailyAvg">
-          ₹0.00
-        </div>
-        <div class="text-[11px] text-slate-400 mt-1" id="kpiProjectedTotal">
-          Projected: ₹0
+        <div class="text-[10px] text-slate-400 mt-2 space-y-0.5">
+          <div class="flex items-center justify-between" id="kpiProjectedTotal">
+            <span>Projected: ₹0</span>
+          </div>
+          <div class="text-[10px] text-slate-400/80 flex items-center justify-between" id="kpiGrossAvgSubtext">
+            <span>Gross Avg: ₹0/day</span>
+          </div>
         </div>
       </div>
 
@@ -356,14 +368,14 @@
         <div class="space-y-3 pt-1">
           <!-- Progress Bar Comparison -->
           <div>
-            <div class="flex justify-between text-xs font-semibold mb-1.5">
-              <span class="flex items-center gap-1.5 text-indigo-400">
-                <span>🗓️ Weekdays (Mon-Fri)</span>
-                <span id="weekdayAmount" class="font-bold text-slate-900 dark:text-white">₹0</span>
+            <div class="flex flex-wrap items-center justify-between gap-2 text-xs font-semibold mb-2">
+              <span class="flex items-center gap-1.5 text-indigo-400 bg-indigo-500/10 px-2 py-1 rounded-lg">
+                <span>🗓️ Mon–Fri:</span>
+                <span id="weekdayAmount" class="font-bold text-slate-900 dark:text-white mono">₹0</span>
               </span>
-              <span class="flex items-center gap-1.5 text-pink-400">
-                <span id="weekendAmount" class="font-bold text-slate-900 dark:text-white">₹0</span>
-                <span>🏖️ Weekends (Sat-Sun)</span>
+              <span class="flex items-center gap-1.5 text-pink-400 bg-pink-500/10 px-2 py-1 rounded-lg">
+                <span>🏖️ Sat–Sun:</span>
+                <span id="weekendAmount" class="font-bold text-slate-900 dark:text-white mono">₹0</span>
               </span>
             </div>
             <div class="w-full h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden flex">
@@ -594,7 +606,7 @@
       </div>
 
       <div class="mt-4 space-y-4">
-        <p class="text-xs text-slate-500 dark:text-slate-400">Set your target monthly spending limit in INR (₹). We'll track your remaining amount and alerts automatically.</p>
+        <p class="text-xs text-slate-500 dark:text-slate-400">Set your target monthly budget and your salary billing cycle start day.</p>
         <div>
           <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Target Monthly Budget (₹)</label>
           <div class="relative">
@@ -603,9 +615,27 @@
           </div>
         </div>
 
+        <div class="border-t border-slate-100 dark:border-slate-800 pt-3">
+          <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Salary / Month Cycle Start Day</label>
+          <p class="text-[11px] text-slate-400 mb-2">If your salary credits on the 26th, set 26 to calculate your monthly period from 26th to next 25th/26th.</p>
+          <select id="salaryCycleStartDayInput" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500">
+            <option value="1">1st of Month (Standard Calendar: 1st – End of Month)</option>
+            <option value="26">26th of Month (Salary Cycle: 26th – 25th/26th)</option>
+            <option value="25">25th of Month (Salary Cycle: 25th – 24th/25th)</option>
+            <option value="27">27th of Month</option>
+            <option value="28">28th of Month</option>
+            <option value="30">30th of Month</option>
+            <option value="5">5th of Month</option>
+            <option value="7">7th of Month</option>
+            <option value="10">10th of Month</option>
+            <option value="15">15th of Month</option>
+            <option value="20">20th of Month</option>
+          </select>
+        </div>
+
         <div class="flex items-center justify-end gap-2 pt-2">
           <button id="cancelBudgetBtn" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition">Cancel</button>
-          <button id="saveBudgetBtn" class="px-5 py-2 rounded-xl text-xs font-bold bg-emerald-500 hover:bg-emerald-600 text-slate-950 transition shadow-lg shadow-emerald-500/20 active:scale-95">Save Budget</button>
+          <button id="saveBudgetBtn" class="px-5 py-2 rounded-xl text-xs font-bold bg-emerald-500 hover:bg-emerald-600 text-slate-950 transition shadow-lg shadow-emerald-500/20 active:scale-95">Save Settings</button>
         </div>
       </div>
     </div>
@@ -946,3 +976,4 @@
   <script src="app.js"></script>
 </body>
 </html>
+
