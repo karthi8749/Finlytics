@@ -194,15 +194,27 @@
       if (stored) {
         expenses = JSON.parse(stored);
 
-        // One-time auto migration: If existing transactions have raw bank strings like "28 09 2026 UPI DR JOE", clean them!
+        // One-time auto migration: Clean raw bank titles, strip trailing -- from notes, and fix categorization
         let migrated = false;
         expenses.forEach(e => {
           if (!e.notes) e.notes = e.title;
-          const cleaned = cleanMerchantTitle(e.title || e.notes);
+
+          // Strip trailing dash placeholders from notes e.g. " - -" or " --"
+          if (e.notes) {
+            const cleanNotes = e.notes.replace(/\s*-\s*-+\s*$/g, '').trim();
+            if (cleanNotes !== e.notes) {
+              e.notes = cleanNotes;
+              migrated = true;
+            }
+          }
+
+          // Clean merchant title using raw notes or existing title
+          const cleaned = cleanMerchantTitle(e.notes || e.title);
           if (cleaned && cleaned !== e.title && cleaned.length >= 2) {
             e.title = cleaned;
             migrated = true;
           }
+
           // Also auto-fix category if currently Others
           if (e.category === 'Others') {
             const reCat = categorizeTransaction(e.notes || e.title);
@@ -1115,11 +1127,11 @@
             ${formatDate(item.date)}
           </td>
           <td class="py-3 px-4 text-slate-900 dark:text-white font-semibold group cursor-pointer" onclick="window.viewTxnDetails('${item.id}')" title="${fullTooltip}">
-            <div class="hover:text-emerald-400 transition inline-flex items-center gap-1.5">
+            <div class="hover:text-emerald-400 transition inline-flex items-center gap-1.5 flex-wrap">
               <span>${item.title}</span>
               <span class="text-[9px] text-slate-400 group-hover:text-emerald-400 font-normal">🔍</span>
             </div>
-            ${item.notes ? `<div class="text-[11px] text-slate-400 font-normal truncate max-w-sm group-hover:text-slate-300 transition">${item.notes}</div>` : ''}
+            ${item.notes ? `<div class="text-[11px] text-slate-400 font-normal break-words leading-relaxed group-hover:text-slate-300 transition mt-0.5 select-text">${item.notes}</div>` : ''}
           </td>
           <td class="py-3 px-4">
             <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold" style="background-color: ${catColor}15; color: ${catColor}; border: 1px solid ${catColor}30;">
@@ -1153,13 +1165,13 @@
       const catIcon = CATEGORY_ICONS[item.category] || '📦';
       const fullTooltip = (item.notes && item.notes.length > item.title.length ? item.notes : `${item.title}${item.notes ? ' — ' + item.notes : ''}`).replace(/"/g, '&quot;');
       return `
-        <div class="bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 flex items-center justify-between gap-3 shadow-sm group" title="${fullTooltip}">
-          <div class="flex items-center gap-3 min-w-0 cursor-pointer" onclick="window.viewTxnDetails('${item.id}')">
-            <div class="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0" style="background-color: ${catColor}15;">
+        <div class="bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 flex items-start justify-between gap-3 shadow-sm group" title="${fullTooltip}">
+          <div class="flex items-start gap-3 min-w-0 cursor-pointer flex-1" onclick="window.viewTxnDetails('${item.id}')">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0 mt-0.5" style="background-color: ${catColor}15;">
               ${catIcon}
             </div>
-            <div class="min-w-0">
-              <h4 class="text-xs font-bold text-slate-900 dark:text-white truncate group-hover:text-emerald-400 transition flex items-center gap-1">
+            <div class="min-w-0 flex-1">
+              <h4 class="text-xs font-bold text-slate-900 dark:text-white break-words group-hover:text-emerald-400 transition flex items-center gap-1">
                 <span>${item.title}</span>
                 <span class="text-[8px] text-slate-400">🔍</span>
               </h4>
@@ -1168,7 +1180,7 @@
                 <span>•</span>
                 <span class="px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-300">${item.paymentMode}</span>
               </div>
-              ${item.notes ? `<p class="text-[10px] text-slate-400 truncate mt-0.5">${item.notes}</p>` : ''}
+              ${item.notes ? `<p class="text-[10px] text-slate-400 break-words leading-relaxed mt-1 select-text">${item.notes}</p>` : ''}
             </div>
           </div>
           <div class="text-right shrink-0">
@@ -1743,16 +1755,28 @@
     if (!narration) return 'Expense';
     let s = narration.trim();
 
+    // Strip trailing dashes/placeholders like ' - -' or ' --' or ' -'
+    s = s.replace(/\s*-\s*-+\s*$/g, '').trim();
+
     // SBI UPI Slash Format (Very Common in SBI Statements):
-    // E.g. "UPI/DR/663617294258/Vasantha/..."
-    // E.g. "UPI/DR/663606394863/KANAGA/..."
-    // E.g. "UPI/DR/663661276826/Mrs/..."
+    // E.g. "UPI/DR/627335144120/Reeta/YES - -"
+    // E.g. "UPI/DR/663979246860/KALA - -"
     // E.g. "UPI/DR/662409905256/HYGREVA/..."
-    const sbiSlashUpiMatch = s.match(/UPI\/(?:DR|CR)\/\d+\/([^\/]+)/i);
+    const sbiSlashUpiMatch = s.match(/UPI\/(?:DR|CR)\/\d+\/([^\/]+)(?:\/([^\/]+))?/i);
     if (sbiSlashUpiMatch && sbiSlashUpiMatch[1]) {
-      let candidate = sbiSlashUpiMatch[1].trim();
-      if (candidate.length >= 2) {
-        return candidate.length > 30 ? candidate.substring(0, 30) : candidate;
+      let candidate = sbiSlashUpiMatch[1].replace(/\s*-\s*-+\s*$/g, '').trim();
+      let extra = sbiSlashUpiMatch[2] ? sbiSlashUpiMatch[2].replace(/\s*-\s*-+\s*$/g, '').trim() : '';
+
+      // Ignore known bank codes or generic status
+      const bankCodes = /^(YES|HDFC|ICICI|SBI|SBIN|AXIS|UTIB|BARB|KKBK|PUNB|CNRB|PAYTM|AIRP|DR|CR)$/i;
+      if (extra && !bankCodes.test(extra) && isNaN(extra)) {
+        candidate = candidate + ' (' + extra + ')';
+      }
+
+      if (candidate.length >= 2 && !/^\d+$/.test(candidate)) {
+        return candidate.length > 35 ? candidate.substring(0, 35) : candidate;
+      } else if (candidate.length >= 2) {
+        return 'UPI Ref ' + candidate;
       }
     }
 
@@ -1766,7 +1790,7 @@
     if (sbiMatch && sbiMatch[1]) {
       let name = sbiMatch[1].trim();
       if (name.length >= 3) {
-        return name.length > 30 ? name.substring(0, 30) : name;
+        return name.length > 35 ? name.substring(0, 35) : name;
       }
     }
 
@@ -1775,7 +1799,7 @@
     if (upiMatch && upiMatch[1]) {
       let candidate = upiMatch[1].trim();
       if (candidate.length > 2 && !/^\d+$/.test(candidate) && !/^(DR|CR)$/i.test(candidate)) {
-        return candidate.length > 30 ? candidate.substring(0, 30) : candidate;
+        return candidate.length > 35 ? candidate.substring(0, 35) : candidate;
       }
     }
 
@@ -1793,6 +1817,9 @@
     // Strip date prefixes e.g. "27 09 2026 " or "27/09/2026 "
     s = s.replace(/^\d{1,2}[\s/-]\d{1,2}[\s/-]\d{2,4}\s+/, '');
 
+    // Strip "UPI DR " or "UPI CR " prefixes
+    s = s.replace(/^UPI\s*(?:DR|CR)\s*/i, '');
+
     // Strip long reference numbers and bank codes
     s = s.replace(/[\d]{8,}/g, '')
          .replace(/\b(REF|NO|TXN|UTRN|CMS|BIL|IMPS|NEFT|RTGS|NACH|ACH|SEND MONEY|PAYMENTFORV1)\b/gi, '')
@@ -1800,7 +1827,7 @@
          .replace(/\s+/g, ' ')
          .trim();
 
-    return s.length > 3 ? (s.length > 32 ? s.substring(0, 32) : s) : narration.substring(0, 32);
+    return s.length >= 2 ? (s.length > 35 ? s.substring(0, 35) : s) : narration.substring(0, 35);
   }
 
   // Parse Indian Date Formats (DD/MM/YYYY, DD-MM-YYYY, YYYY-MM-DD, DD-MMM-YY, etc.)
@@ -1935,10 +1962,28 @@
 
       // Check if this is a genuine debit expense
       if (debitAmt > 0 && rawDate && rawDate.toString().trim() !== '') {
+        let fullDesc = (rawDesc || '').toString().trim();
+
+        // Check if subsequent rows in Excel/CSV are continuation of description (e.g. SBI multi-row cells)
+        while (r + 1 < rows.length) {
+          const nextRow = rows[r + 1];
+          const nextDate = nextRow ? (nextRow[dateCol] || '').toString().trim() : '';
+          const nextAmt = debitCol !== -1 ? parseAmount(nextRow[debitCol]) : (amountCol !== -1 ? parseAmount(nextRow[amountCol]) : 0);
+          const nextDesc = descCol !== -1 ? (nextRow[descCol] || '').toString().trim() : '';
+          // If no date and no amount, but description exists, it's a continuation line!
+          if (!nextDate && nextAmt === 0 && nextDesc && !/statement summary|total|closing balance/i.test(nextDesc)) {
+            fullDesc += ' ' + nextDesc;
+            r++;
+          } else {
+            break;
+          }
+        }
+
+        fullDesc = fullDesc.replace(/\s*-\s*-+\s*$/g, '').trim();
         const parsedDate = parseBankDate(rawDate);
-        const category = categorizeTransaction(rawDesc);
-        const paymentMode = detectPaymentMode(rawDesc);
-        const cleanTitle = cleanMerchantTitle(rawDesc);
+        const category = categorizeTransaction(fullDesc);
+        const paymentMode = detectPaymentMode(fullDesc);
+        const cleanTitle = cleanMerchantTitle(fullDesc);
 
         extracted.push({
           id: 'stmt_' + Date.now() + '_' + r,
@@ -1947,7 +1992,7 @@
           category,
           paymentMode,
           date: parsedDate,
-          notes: rawDesc.trim()
+          notes: fullDesc
         });
 
         totalDebitSum += debitAmt;
@@ -1969,9 +2014,9 @@
     importPreviewTableBody.innerHTML = extracted.slice(0, 50).map(item => `
       <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40">
         <td class="py-1.5 px-3 whitespace-nowrap text-slate-500">${formatDate(item.date)}</td>
-        <td class="py-1.5 px-3 truncate max-w-xs text-slate-900 dark:text-white font-semibold">
-          ${item.title}
-          <div class="text-[10px] text-slate-400 truncate">${item.notes}</div>
+        <td class="py-1.5 px-3 max-w-md text-slate-900 dark:text-white font-semibold">
+          <div class="break-words">${item.title}</div>
+          <div class="text-[10px] text-slate-400 break-words leading-relaxed mt-0.5">${item.notes}</div>
         </td>
         <td class="py-1.5 px-3 whitespace-nowrap">
           <span class="px-2 py-0.5 rounded text-[10px] font-bold" style="background-color: ${CATEGORY_COLORS[item.category]}20; color: ${CATEGORY_COLORS[item.category]};">
@@ -2284,7 +2329,7 @@
                 rowData.balance = it.str;
               } else if (col === 'refno' || col === 'valueDate' || col === 'date') {
                 // ignore date/ref columns
-              } else if (it.str === '₹' || it.str === '-') {
+              } else if (it.str === '₹' || /^[-–—\s]+$/.test(it.str)) {
                 // ignore currency symbol and dash placeholders
               } else if (!isNumeric) {
                 // Likely narration text
@@ -2302,25 +2347,33 @@
             }
 
             const debitAmt = parseAmount(rowData.withdrawal);
+            rowData.narration = rowData.narration.replace(/\s*-\s*-+\s*$/g, '').trim();
 
             currentTxn = {
               date: parseBankDate(rowData.date),
-              narration: rowData.narration.trim(),
+              narration: rowData.narration,
               amount: debitAmt,
               isDebit: debitAmt > 0 && !rowData.deposit
             };
 
           } else if (currentTxn) {
-            // Continuation line: append to narration
+            // Continuation line: append all text items belonging to transaction
             if (!isSummaryLine) {
               const textOnly = lineItems.filter(it => {
-                if (colBounds.narration) {
-                  return Math.abs(it.x - colBounds.narration.x) < 200;
-                }
-                return it.x < 360;
+                const isNumeric = /^[\d,]+(?:\.\d{1,2})?$/.test(it.str.replace(/[^\d.,]/g, ''));
+                if (colBounds.withdrawal && it.x >= colBounds.withdrawal.x - 20) return false;
+                if (colBounds.deposit && it.x >= colBounds.deposit.x - 20) return false;
+                if (colBounds.balance && it.x >= colBounds.balance.x - 20) return false;
+                if (isNumeric && Math.abs(it.x - (colBounds.balance ? colBounds.balance.x : 500)) < 80) return false;
+                if (/^[-–—\s]+$/.test(it.str)) return false;
+                return true;
               }).map(it => it.str).join(' ');
+
               if (textOnly && !/^[\d,]+\.\d{2}$/.test(textOnly.trim())) {
-                currentTxn.narration += ' ' + textOnly;
+                const cleanCont = textOnly.replace(/\s*-\s*-+\s*$/g, '').trim();
+                if (cleanCont) {
+                  currentTxn.narration = (currentTxn.narration + ' ' + cleanCont).replace(/\s*-\s*-+\s*$/g, '').trim();
+                }
               }
             }
           }
@@ -2436,9 +2489,9 @@
           importPreviewTableBody.innerHTML = formattedExpenses.slice(0, 50).map(item => `
             <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40">
               <td class="py-1.5 px-3 whitespace-nowrap text-slate-500">${formatDate(item.date)}</td>
-              <td class="py-1.5 px-3 truncate max-w-xs text-slate-900 dark:text-white font-semibold">
-                ${item.title}
-                <div class="text-[10px] text-slate-400 truncate">${item.notes}</div>
+              <td class="py-1.5 px-3 max-w-md text-slate-900 dark:text-white font-semibold">
+                <div class="break-words">${item.title}</div>
+                <div class="text-[10px] text-slate-400 break-words leading-relaxed mt-0.5">${item.notes}</div>
               </td>
               <td class="py-1.5 px-3 whitespace-nowrap">
                 <span class="px-2 py-0.5 rounded text-[10px] font-bold" style="background-color: ${CATEGORY_COLORS[item.category]}20; color: ${CATEGORY_COLORS[item.category]};">
