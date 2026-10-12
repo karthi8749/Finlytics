@@ -110,15 +110,32 @@
 
       <!-- Actions: Month Filter, Theme Toggle, Quick Add & 3-Dots Menu -->
       <div class="flex items-center gap-1 sm:gap-2 shrink-0">
-        <!-- Monthly Filter Custom Dropdown -->
-        <div class="relative shrink-0" id="monthDropdownContainer">
-          <button id="monthDropdownBtn" type="button" class="flex items-center gap-1 sm:gap-1.5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:border-emerald-500 cursor-pointer shadow-sm transition">
+        <!-- Date Range Filter (From & To Date Selector) -->
+        <div class="relative shrink-0 flex items-center gap-1 sm:gap-1.5 bg-white dark:bg-slate-800/95 border border-slate-200 dark:border-slate-700/80 rounded-xl px-2 py-1 shadow-sm transition" id="dateRangeContainer">
+          <div class="flex items-center gap-1">
             <i data-lucide="calendar" class="w-3.5 h-3.5 text-emerald-500 shrink-0"></i>
-            <span id="selectedMonthLabel" class="max-w-[70px] sm:max-w-none truncate">All Months</span>
-            <i data-lucide="chevron-down" class="w-3 h-3 text-slate-400 shrink-0"></i>
-          </button>
-          <div id="monthDropdownMenu" class="hidden absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 py-1.5 text-xs font-medium max-h-60 overflow-y-auto">
-            <!-- Dynamically populated -->
+            <div class="flex items-center gap-1 text-[11px] font-semibold text-slate-700 dark:text-slate-200">
+              <span class="text-[9px] uppercase tracking-wider text-slate-400 font-bold hidden sm:inline">From</span>
+              <input type="date" id="filterFromDate" class="bg-slate-50 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-700 rounded-lg px-1.5 py-0.5 text-[11px] font-mono text-slate-800 dark:text-slate-200 focus:outline-none focus:border-emerald-500 cursor-pointer" title="From Date" />
+              <span class="text-slate-400 font-bold text-[10px]">→</span>
+              <span class="text-[9px] uppercase tracking-wider text-slate-400 font-bold hidden sm:inline">To</span>
+              <input type="date" id="filterToDate" class="bg-slate-50 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-700 rounded-lg px-1.5 py-0.5 text-[11px] font-mono text-slate-800 dark:text-slate-200 focus:outline-none focus:border-emerald-500 cursor-pointer" title="To Date" />
+            </div>
+          </div>
+
+          <!-- Quick Presets / Clear Button -->
+          <div class="flex items-center gap-1 border-l border-slate-200 dark:border-slate-700/80 pl-1">
+            <button id="clearDateRangeBtn" type="button" class="text-[10px] font-bold text-slate-400 hover:text-rose-400 px-1.5 py-0.5 rounded transition hover:bg-slate-100 dark:hover:bg-slate-700/60" title="Reset to All Dates">
+              All
+            </button>
+            <button id="datePresetQuickBtn" type="button" class="p-1 text-slate-400 hover:text-emerald-400 rounded transition hover:bg-slate-100 dark:hover:bg-slate-700/60" title="Quick Range (This Month, Salary 26th Cycle, etc.)">
+              <i data-lucide="sliders-horizontal" class="w-3 h-3"></i>
+            </button>
+          </div>
+
+          <!-- Quick Presets Dropdown Menu -->
+          <div id="datePresetsMenu" class="hidden absolute right-0 top-full mt-2 w-56 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl z-50 py-1.5 text-xs font-medium max-h-72 overflow-y-auto">
+            <!-- Dynamically populated presets (Current Month, Salary Cycle 26th-25th, Last 30 Days, etc.) -->
           </div>
         </div>
 

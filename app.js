@@ -77,7 +77,8 @@
   let monthlyBudget = 35000; // Default ₹35,000 target
   let excludeFixedBills = localStorage.getItem(STORAGE_KEY_EXCLUDE_BILLS) !== 'false'; // default true
   let salaryCycleStartDay = parseInt(localStorage.getItem(STORAGE_KEY_SALARY_CYCLE) || '26', 10); // default 26th
-  let selectedMonth = 'all'; // 'all' or 'YYYY-MM' or 'YYYY-MM-DD_YYYY-MM-DD'
+  let selectedDateFrom = ''; // 'YYYY-MM-DD' or ''
+  let selectedDateTo = ''; // 'YYYY-MM-DD' or ''
   let selectedCategory = 'all';
   let searchQuery = '';
   let deferredPrompt = null;
@@ -104,9 +105,12 @@
   const peakDayLabel = document.getElementById('peakDayLabel');
   const categoryChartTotal = document.getElementById('categoryChartTotal');
 
-  const monthDropdownBtn = document.getElementById('monthDropdownBtn');
-  const monthDropdownMenu = document.getElementById('monthDropdownMenu');
-  const selectedMonthLabel = document.getElementById('selectedMonthLabel');
+  // Date Range Filter Elements
+  const filterFromDate = document.getElementById('filterFromDate');
+  const filterToDate = document.getElementById('filterToDate');
+  const clearDateRangeBtn = document.getElementById('clearDateRangeBtn');
+  const datePresetQuickBtn = document.getElementById('datePresetQuickBtn');
+  const datePresetsMenu = document.getElementById('datePresetsMenu');
 
   const moreMenuBtn = document.getElementById('moreMenuBtn');
   const moreMenuDropdown = document.getElementById('moreMenuDropdown');
@@ -363,7 +367,7 @@
     return keywords.some(k => text.includes(k));
   }
 
-  // Helper: Format date range for Salary Cycle
+  // Helper: Format date range for UI
   function formatCycleLabel(startStr, endStr) {
     try {
       const s = new Date(startStr);
@@ -379,110 +383,121 @@
     }
   }
 
-  // --- Unique Month Aggregates ---
-  function getAvailableMonths() {
-    if (salaryCycleStartDay === 1) {
-      // Standard Calendar Months
-      const monthSet = new Set();
-      expenses.forEach((item) => {
-        if (item.date && item.date.length >= 7) {
-          monthSet.add(item.date.substring(0, 7)); // 'YYYY-MM'
-        }
-      });
-      return Array.from(monthSet).sort().reverse();
-    }
+  // --- Render Date Presets (Quick Range Picker) ---
+  function renderDatePresetsMenu() {
+    if (!datePresetsMenu) return;
+    datePresetsMenu.innerHTML = '';
 
-    // Salary Billing Cycles (e.g. 26th to 25th)
-    const cycleMap = new Map();
-    const cycleDay = salaryCycleStartDay;
+    const today = new Date();
+    const toISO = (d) => {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
 
-    expenses.forEach((item) => {
-      if (!item.date || item.date.length < 10) return;
-      const d = new Date(item.date);
-      if (isNaN(d)) return;
+    const presets = [];
 
-      const y = d.getFullYear();
-      const m = d.getMonth(); // 0-indexed
-      const dateNum = d.getDate();
-
-      let cycleStart, cycleEnd;
-      if (dateNum >= cycleDay) {
-        cycleStart = new Date(y, m, cycleDay);
-        // Ends on day before cycleDay next month
-        cycleEnd = new Date(y, m + 1, cycleDay - 1);
-      } else {
-        cycleStart = new Date(y, m - 1, cycleDay);
-        cycleEnd = new Date(y, m, cycleDay - 1);
-      }
-
-      const toISO = (dt) => {
-        const year = dt.getFullYear();
-        const month = String(dt.getMonth() + 1).padStart(2, '0');
-        const day = String(dt.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-      };
-
-      const startKey = toISO(cycleStart);
-      const endKey = toISO(cycleEnd);
-      const key = `${startKey}_${endKey}`;
-
-      if (!cycleMap.has(key)) {
-        cycleMap.set(key, {
-          key,
-          label: formatCycleLabel(startKey, endKey),
-          startTime: cycleStart.getTime()
-        });
-      }
+    // 1. All Dates
+    presets.push({
+      label: 'All Dates (Full History)',
+      from: '',
+      to: '',
+      icon: 'layers'
     });
 
-    const sortedCycles = Array.from(cycleMap.values())
-      .sort((a, b) => b.startTime - a.startTime)
-      .map(c => c.key);
+    // 2. This Month (Calendar 1st to End)
+    const curYear = today.getFullYear();
+    const curMonth = today.getMonth();
+    const firstDayMonth = new Date(curYear, curMonth, 1);
+    const lastDayMonth = new Date(curYear, curMonth + 1, 0);
+    presets.push({
+      label: `This Month (${today.toLocaleDateString('en-IN', { month: 'short' })})`,
+      from: toISO(firstDayMonth),
+      to: toISO(lastDayMonth),
+      icon: 'calendar'
+    });
 
-    return sortedCycles;
-  }
-
-  function getMonthName(ym) {
-    if (!ym || ym === 'all') return 'All Periods';
-    if (ym.includes('_')) {
-      const [start, end] = ym.split('_');
-      return formatCycleLabel(start, end);
+    // 3. Current Salary Cycle (26th to 25th)
+    const cycleDay = salaryCycleStartDay || 26;
+    let salStart, salEnd;
+    if (today.getDate() >= cycleDay) {
+      salStart = new Date(curYear, curMonth, cycleDay);
+      salEnd = new Date(curYear, curMonth + 1, cycleDay - 1);
+    } else {
+      salStart = new Date(curYear, curMonth - 1, cycleDay);
+      salEnd = new Date(curYear, curMonth, cycleDay - 1);
     }
-    const [year, month] = ym.split('-');
-    const date = new Date(Number(year), Number(month) - 1, 1);
-    return date.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
-  }
+    presets.push({
+      label: `Current Salary Cycle (${cycleDay}th)`,
+      sub: formatCycleLabel(toISO(salStart), toISO(salEnd)),
+      from: toISO(salStart),
+      to: toISO(salEnd),
+      icon: 'briefcase'
+    });
 
-  // --- Render Month Filter Dropdown ---
-  function renderMonthDropdown() {
-    const months = getAvailableMonths();
-    monthDropdownMenu.innerHTML = '';
+    // 4. Previous Salary Cycle
+    let prevSalStart, prevSalEnd;
+    if (today.getDate() >= cycleDay) {
+      prevSalStart = new Date(curYear, curMonth - 1, cycleDay);
+      prevSalEnd = new Date(curYear, curMonth, cycleDay - 1);
+    } else {
+      prevSalStart = new Date(curYear, curMonth - 2, cycleDay);
+      prevSalEnd = new Date(curYear, curMonth - 1, cycleDay - 1);
+    }
+    presets.push({
+      label: `Previous Salary Cycle (${cycleDay}th)`,
+      sub: formatCycleLabel(toISO(prevSalStart), toISO(prevSalEnd)),
+      from: toISO(prevSalStart),
+      to: toISO(prevSalEnd),
+      icon: 'history'
+    });
 
-    // "All Months" option
-    const allBtn = document.createElement('button');
-    allBtn.className = `w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-lg flex items-center justify-between ${selectedMonth === 'all' ? 'text-emerald-500 font-bold bg-emerald-500/10' : 'text-slate-700 dark:text-slate-200'}`;
-    allBtn.innerHTML = `<span>All Periods</span> ${selectedMonth === 'all' ? '<i data-lucide="check" class="w-3.5 h-3.5"></i>' : ''}`;
-    allBtn.onclick = () => {
-      selectedMonth = 'all';
-      selectedMonthLabel.textContent = 'All Periods';
-      monthDropdownMenu.classList.add('hidden');
-      refreshView();
-    };
-    monthDropdownMenu.appendChild(allBtn);
+    // 5. Last 30 Days
+    const last30 = new Date(today);
+    last30.setDate(last30.getDate() - 30);
+    presets.push({
+      label: 'Last 30 Days',
+      from: toISO(last30),
+      to: toISO(today),
+      icon: 'clock'
+    });
 
-    // Each Month / Cycle option
-    months.forEach((ym) => {
+    // 6. Last 7 Days
+    const last7 = new Date(today);
+    last7.setDate(last7.getDate() - 7);
+    presets.push({
+      label: 'Last 7 Days',
+      from: toISO(last7),
+      to: toISO(today),
+      icon: 'zap'
+    });
+
+    presets.forEach(p => {
+      const isCurrent = (selectedDateFrom === p.from && selectedDateTo === p.to);
       const btn = document.createElement('button');
-      const isSelected = selectedMonth === ym;
-      btn.className = `w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-lg flex items-center justify-between ${isSelected ? 'text-emerald-500 font-bold bg-emerald-500/10' : 'text-slate-700 dark:text-slate-200'}`;
-      btn.innerHTML = `<span>${getMonthName(ym)}</span> ${isSelected ? '<i data-lucide="check" class="w-3.5 h-3.5"></i>' : ''}`;
+      btn.type = 'button';
+      btn.className = `w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-lg flex items-center justify-between transition ${isCurrent ? 'bg-emerald-500/10 text-emerald-400 font-bold' : 'text-slate-700 dark:text-slate-200'}`;
+      btn.innerHTML = `
+        <div class="min-w-0 pr-2">
+          <div class="truncate flex items-center gap-1.5">
+            <i data-lucide="${p.icon || 'calendar'}" class="w-3.5 h-3.5 text-emerald-400 shrink-0"></i>
+            <span>${p.label}</span>
+          </div>
+          ${p.sub ? `<div class="text-[10px] text-slate-400 ml-5 font-normal">${p.sub}</div>` : ''}
+        </div>
+        ${isCurrent ? '<i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400 shrink-0"></i>' : ''}
+      `;
+
       btn.onclick = () => {
-        selectedMonth = ym;
-        selectedMonthLabel.textContent = getMonthName(ym);
-        monthDropdownMenu.classList.add('hidden');
+        selectedDateFrom = p.from;
+        selectedDateTo = p.to;
+        if (filterFromDate) filterFromDate.value = p.from;
+        if (filterToDate) filterToDate.value = p.to;
+        datePresetsMenu.classList.add('hidden');
         refreshView();
       };
-      monthDropdownMenu.appendChild(btn);
+      datePresetsMenu.appendChild(btn);
     });
 
     if (window.lucide) lucide.createIcons();
@@ -491,16 +506,14 @@
   // --- Filter Logic ---
   function getFilteredExpenses() {
     return expenses.filter((item) => {
-      // Period Filter
-      if (selectedMonth !== 'all') {
-        if (!item.date) return false;
-        if (selectedMonth.includes('_')) {
-          const [startStr, endStr] = selectedMonth.split('_');
-          if (item.date < startStr || item.date > endStr) return false;
-        } else {
-          if (!item.date.startsWith(selectedMonth)) return false;
-        }
+      // Date Range Filter (From & To)
+      if (selectedDateFrom && item.date && item.date < selectedDateFrom) {
+        return false;
       }
+      if (selectedDateTo && item.date && item.date > selectedDateTo) {
+        return false;
+      }
+
       // Category Filter
       if (selectedCategory !== 'all') {
         if (item.category !== selectedCategory) return false;
@@ -564,7 +577,27 @@
     const now = new Date();
     const todayISO = now.toISOString().split('T')[0];
 
-    if (selectedMonth === 'all') {
+    if (selectedDateFrom && selectedDateTo) {
+      const sDate = new Date(selectedDateFrom);
+      const eDate = new Date(selectedDateTo);
+      daysInPeriod = Math.max(1, Math.round((eDate - sDate) / (1000 * 60 * 60 * 24)) + 1);
+
+      if (todayISO < selectedDateFrom) {
+        daysPassed = 1;
+      } else if (todayISO > selectedDateTo) {
+        daysPassed = daysInPeriod;
+      } else {
+        daysPassed = Math.max(1, Math.round((now - sDate) / (1000 * 60 * 60 * 24)) + 1);
+      }
+    } else if (selectedDateFrom && !selectedDateTo) {
+      const sDate = new Date(selectedDateFrom);
+      daysPassed = Math.max(1, Math.round((now - sDate) / (1000 * 60 * 60 * 24)) + 1);
+      daysInPeriod = daysPassed;
+    } else if (!selectedDateFrom && selectedDateTo) {
+      daysPassed = 30;
+      daysInPeriod = 30;
+    } else {
+      // All Dates
       const dates = filteredList.map(e => new Date(e.date)).filter(d => !isNaN(d));
       if (dates.length >= 2) {
         const minD = new Date(Math.min(...dates));
@@ -574,28 +607,7 @@
         daysInPeriod = diffDays;
       } else {
         daysPassed = 1;
-      }
-    } else if (selectedMonth.includes('_')) {
-      // Custom Salary Cycle: 'start_end'
-      const [startStr, endStr] = selectedMonth.split('_');
-      const sDate = new Date(startStr);
-      const eDate = new Date(endStr);
-      daysInPeriod = Math.max(1, Math.round((eDate - sDate) / (1000 * 60 * 60 * 24)) + 1);
-
-      if (todayISO < startStr) {
-        daysPassed = 1;
-      } else if (todayISO > endStr) {
-        daysPassed = daysInPeriod;
-      } else {
-        daysPassed = Math.max(1, Math.round((now - sDate) / (1000 * 60 * 60 * 24)) + 1);
-      }
-    } else {
-      const [y, m] = selectedMonth.split('-').map(Number);
-      daysInPeriod = new Date(y, m, 0).getDate();
-      if (y === now.getFullYear() && (m - 1) === now.getMonth()) {
-        daysPassed = Math.max(1, now.getDate());
-      } else {
-        daysPassed = daysInPeriod;
+        daysInPeriod = 1;
       }
     }
 
@@ -662,23 +674,22 @@
       let prevMonthSpent = 0;
       let prevMonthName = '';
 
-      if (selectedMonth === 'all') {
-        // Compare latest month with second latest month
-        const allMonths = getAvailableMonths();
-        if (allMonths.length >= 2) {
-          const m1 = allMonths[0]; // newest
-          const m2 = allMonths[1]; // previous
-          currentMonthSpent = expenses.filter(e => e.date && e.date.startsWith(m1)).reduce((s, e) => s + e.amount, 0);
-          prevMonthSpent = expenses.filter(e => e.date && e.date.startsWith(m2)).reduce((s, e) => s + e.amount, 0);
-          prevMonthName = getMonthName(m2).split(' ')[0];
+      // Calculate MoM comparison based on date ranges
+      const monthMap = {};
+      expenses.forEach(e => {
+        if (e.date && e.date.length >= 7) {
+          const ym = e.date.substring(0, 7);
+          monthMap[ym] = (monthMap[ym] || 0) + (Number(e.amount) || 0);
         }
-      } else {
-        // Find previous chronological month
-        const [currY, currM] = selectedMonth.split('-').map(Number);
-        const prevDate = new Date(currY, currM - 2, 1);
-        const prevYm = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
-        prevMonthSpent = expenses.filter(e => e.date && e.date.startsWith(prevYm)).reduce((s, e) => s + e.amount, 0);
-        prevMonthName = prevDate.toLocaleDateString('en-IN', { month: 'short' });
+      });
+      const sortedYMs = Object.keys(monthMap).sort().reverse();
+      if (sortedYMs.length >= 2) {
+        const m1 = sortedYMs[0];
+        const m2 = sortedYMs[1];
+        currentMonthSpent = monthMap[m1];
+        prevMonthSpent = monthMap[m2];
+        const [y, m] = m2.split('-');
+        prevMonthName = new Date(Number(y), Number(m) - 1, 1).toLocaleDateString('en-IN', { month: 'short' });
       }
 
       if (prevMonthSpent > 0) {
@@ -1504,7 +1515,7 @@
 
   // --- Master View Refresh ---
   function refreshView() {
-    renderMonthDropdown();
+    renderDatePresetsMenu();
     renderCategoryFilterPills();
     populateCategoryDropdowns();
     const filtered = getFilteredExpenses();
@@ -1849,6 +1860,47 @@
     });
   }
 
+  // --- Date Range Filter Listeners (From & To) ---
+  if (filterFromDate) {
+    filterFromDate.addEventListener('change', () => {
+      selectedDateFrom = filterFromDate.value;
+      refreshView();
+    });
+  }
+
+  if (filterToDate) {
+    filterToDate.addEventListener('change', () => {
+      selectedDateTo = filterToDate.value;
+      refreshView();
+    });
+  }
+
+  if (clearDateRangeBtn) {
+    clearDateRangeBtn.addEventListener('click', () => {
+      selectedDateFrom = '';
+      selectedDateTo = '';
+      if (filterFromDate) filterFromDate.value = '';
+      if (filterToDate) filterToDate.value = '';
+      if (datePresetsMenu) datePresetsMenu.classList.add('hidden');
+      refreshView();
+    });
+  }
+
+  if (datePresetQuickBtn && datePresetsMenu) {
+    datePresetQuickBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      datePresetsMenu.classList.toggle('hidden');
+      if (window.lucide) lucide.createIcons();
+    });
+
+    document.addEventListener('click', (e) => {
+      const container = document.getElementById('dateRangeContainer');
+      if (container && !container.contains(e.target)) {
+        datePresetsMenu.classList.add('hidden');
+      }
+    });
+  }
+
   // --- Export CSV ---
   exportCsvOption.addEventListener('click', () => {
     moreMenuDropdown.classList.add('hidden');
@@ -1980,24 +2032,17 @@
   });
 
   // --- Dropdown Toggles & Click Outside ---
-  monthDropdownBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    monthDropdownMenu.classList.toggle('hidden');
-    moreMenuDropdown.classList.add('hidden');
-  });
-
-  moreMenuBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    moreMenuDropdown.classList.toggle('hidden');
-    monthDropdownMenu.classList.add('hidden');
-  });
+  if (moreMenuBtn) {
+    moreMenuBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (moreMenuDropdown) moreMenuDropdown.classList.toggle('hidden');
+    });
+  }
 
   document.addEventListener('click', (e) => {
-    if (!monthDropdownContainer.contains(e.target)) {
-      monthDropdownMenu.classList.add('hidden');
-    }
-    if (!moreMenuContainer.contains(e.target)) {
-      moreMenuDropdown.classList.add('hidden');
+    const moreContainer = document.getElementById('moreMenuContainer');
+    if (moreContainer && !moreContainer.contains(e.target)) {
+      if (moreMenuDropdown) moreMenuDropdown.classList.add('hidden');
     }
   });
 
