@@ -193,6 +193,30 @@
       const stored = localStorage.getItem(STORAGE_KEY_EXPENSES);
       if (stored) {
         expenses = JSON.parse(stored);
+
+        // One-time auto migration: If existing transactions have raw bank strings like "28 09 2026 UPI DR JOE", clean them!
+        let migrated = false;
+        expenses.forEach(e => {
+          if (!e.notes) e.notes = e.title;
+          const cleaned = cleanMerchantTitle(e.title || e.notes);
+          if (cleaned && cleaned !== e.title && cleaned.length >= 2) {
+            e.title = cleaned;
+            migrated = true;
+          }
+          // Also auto-fix category if currently Others
+          if (e.category === 'Others') {
+            const reCat = categorizeTransaction(e.notes || e.title);
+            if (reCat !== 'Others') {
+              e.category = reCat;
+              migrated = true;
+            }
+          }
+        });
+        if (migrated) {
+          saveData();
+          console.log('⚡ Finlytics auto-cleaned existing transactions and categorization!');
+        }
+
       } else {
         expenses = [...DEFAULT_SAMPLE_DATA];
         saveData();
@@ -1090,9 +1114,12 @@
           <td class="py-3 px-4 text-slate-500 dark:text-slate-400 whitespace-nowrap">
             ${formatDate(item.date)}
           </td>
-          <td class="py-3 px-4 text-slate-900 dark:text-white font-semibold group cursor-help" title="${fullTooltip}">
-            <div class="hover:text-emerald-400 transition inline-block">${item.title}</div>
-            ${item.notes ? `<div class="text-[11px] text-slate-400 font-normal truncate max-w-sm group-hover:text-slate-300 transition" title="${fullTooltip}">${item.notes}</div>` : ''}
+          <td class="py-3 px-4 text-slate-900 dark:text-white font-semibold group cursor-pointer" onclick="window.viewTxnDetails('${item.id}')" title="${fullTooltip}">
+            <div class="hover:text-emerald-400 transition inline-flex items-center gap-1.5">
+              <span>${item.title}</span>
+              <span class="text-[9px] text-slate-400 group-hover:text-emerald-400 font-normal">🔍</span>
+            </div>
+            ${item.notes ? `<div class="text-[11px] text-slate-400 font-normal truncate max-w-sm group-hover:text-slate-300 transition">${item.notes}</div>` : ''}
           </td>
           <td class="py-3 px-4">
             <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold" style="background-color: ${catColor}15; color: ${catColor}; border: 1px solid ${catColor}30;">
@@ -1127,18 +1154,21 @@
       const fullTooltip = (item.notes && item.notes.length > item.title.length ? item.notes : `${item.title}${item.notes ? ' — ' + item.notes : ''}`).replace(/"/g, '&quot;');
       return `
         <div class="bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 flex items-center justify-between gap-3 shadow-sm group" title="${fullTooltip}">
-          <div class="flex items-center gap-3 min-w-0">
+          <div class="flex items-center gap-3 min-w-0 cursor-pointer" onclick="window.viewTxnDetails('${item.id}')">
             <div class="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0" style="background-color: ${catColor}15;">
               ${catIcon}
             </div>
             <div class="min-w-0">
-              <h4 class="text-xs font-bold text-slate-900 dark:text-white truncate cursor-help group-hover:text-emerald-400 transition" title="${fullTooltip}">${item.title}</h4>
+              <h4 class="text-xs font-bold text-slate-900 dark:text-white truncate group-hover:text-emerald-400 transition flex items-center gap-1">
+                <span>${item.title}</span>
+                <span class="text-[8px] text-slate-400">🔍</span>
+              </h4>
               <div class="flex items-center gap-2 text-[10px] text-slate-400 mt-0.5">
                 <span>${formatDate(item.date)}</span>
                 <span>•</span>
                 <span class="px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-300">${item.paymentMode}</span>
               </div>
-              ${item.notes ? `<p class="text-[10px] text-slate-400 truncate mt-0.5 cursor-help" title="${fullTooltip}">${item.notes}</p>` : ''}
+              ${item.notes ? `<p class="text-[10px] text-slate-400 truncate mt-0.5">${item.notes}</p>` : ''}
             </div>
           </div>
           <div class="text-right shrink-0">
@@ -1181,6 +1211,55 @@
     expenseModal.classList.remove('hidden');
     if (window.lucide) lucide.createIcons();
     formAmount.focus();
+  }
+
+  // --- Transaction Details Modal Logic ---
+  const txnDetailsModal = document.getElementById('txnDetailsModal');
+  const closeTxnModalBtn = document.getElementById('closeTxnModalBtn');
+  const doneTxnModalBtn = document.getElementById('doneTxnModalBtn');
+  const copyTxnNarrationBtn = document.getElementById('copyTxnNarrationBtn');
+  const txnModalMerchant = document.getElementById('txnModalMerchant');
+  const txnModalDate = document.getElementById('txnModalDate');
+  const txnModalAmount = document.getElementById('txnModalAmount');
+  const txnModalCategory = document.getElementById('txnModalCategory');
+  const txnModalMode = document.getElementById('txnModalMode');
+  const txnModalFullMessage = document.getElementById('txnModalFullMessage');
+
+  window.viewTxnDetails = function (id) {
+    const item = expenses.find(e => e.id === id);
+    if (!item || !txnDetailsModal) return;
+
+    txnModalMerchant.textContent = item.title;
+    txnModalDate.textContent = formatDate(item.date);
+    txnModalAmount.textContent = formatINR(item.amount);
+    txnModalCategory.textContent = `${CATEGORY_ICONS[item.category] || '📦'} ${item.category}`;
+    txnModalCategory.style.backgroundColor = `${CATEGORY_COLORS[item.category] || '#10b981'}25`;
+    txnModalCategory.style.color = CATEGORY_COLORS[item.category] || '#10b981';
+    txnModalMode.textContent = `Paid via ${item.paymentMode}`;
+
+    const rawMsg = item.notes && item.notes.trim() ? item.notes : item.title;
+    txnModalFullMessage.textContent = rawMsg;
+
+    txnDetailsModal.classList.remove('hidden');
+    if (window.lucide) lucide.createIcons();
+  };
+
+  function closeTxnModal() {
+    if (txnDetailsModal) txnDetailsModal.classList.add('hidden');
+  }
+
+  if (closeTxnModalBtn) closeTxnModalBtn.addEventListener('click', closeTxnModal);
+  if (doneTxnModalBtn) doneTxnModalBtn.addEventListener('click', closeTxnModal);
+
+  if (copyTxnNarrationBtn) {
+    copyTxnNarrationBtn.addEventListener('click', () => {
+      const text = txnModalFullMessage.textContent;
+      if (text) {
+        navigator.clipboard.writeText(text).then(() => {
+          alert('Full bank narration copied to clipboard!');
+        });
+      }
+    });
   }
 
   window.editExpense = function (id) {
