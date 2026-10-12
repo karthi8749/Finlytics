@@ -1,5 +1,5 @@
 // Finlytics Service Worker
-const CACHE_NAME = 'finlytics-v20';
+const CACHE_NAME = 'finlytics-v21';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
