@@ -1860,8 +1860,44 @@
     });
   }
 
-  // --- Date Range Filter Listeners (From & To) ---
+  // Helper to open native date picker smoothly on mobile & desktop
+  function triggerDatePicker(inputEl) {
+    if (!inputEl) return;
+    try {
+      if (typeof inputEl.showPicker === 'function') {
+        inputEl.showPicker();
+      } else {
+        inputEl.focus();
+        inputEl.click();
+      }
+    } catch (e) {
+      inputEl.focus();
+    }
+  }
+
+  const fromDateBox = document.getElementById('fromDateBox');
+  const toDateBox = document.getElementById('toDateBox');
+
+  if (fromDateBox && filterFromDate) {
+    fromDateBox.addEventListener('click', (e) => {
+      if (e.target !== filterFromDate) {
+        triggerDatePicker(filterFromDate);
+      }
+    });
+  }
+
+  if (toDateBox && filterToDate) {
+    toDateBox.addEventListener('click', (e) => {
+      if (e.target !== filterToDate) {
+        triggerDatePicker(filterToDate);
+      }
+    });
+  }
+
   if (filterFromDate) {
+    filterFromDate.addEventListener('click', () => {
+      triggerDatePicker(filterFromDate);
+    });
     filterFromDate.addEventListener('change', () => {
       selectedDateFrom = filterFromDate.value;
       refreshView();
@@ -1869,6 +1905,9 @@
   }
 
   if (filterToDate) {
+    filterToDate.addEventListener('click', () => {
+      triggerDatePicker(filterToDate);
+    });
     filterToDate.addEventListener('change', () => {
       selectedDateTo = filterToDate.value;
       refreshView();
