@@ -75,7 +75,7 @@
 
   let expenses = [];
   let monthlyBudget = 35000; // Default ₹35,000 target
-  let excludeFixedBills = localStorage.getItem(STORAGE_KEY_EXCLUDE_BILLS) !== 'false'; // default true
+  let excludeFixedBills = localStorage.getItem(STORAGE_KEY_EXCLUDE_BILLS) !== 'false'; // default true: exclude bills & rent from daily avg & projection
   let salaryCycleStartDay = parseInt(localStorage.getItem(STORAGE_KEY_SALARY_CYCLE) || '26', 10); // default 26th
   let selectedDateFrom = ''; // 'YYYY-MM-DD' or ''
   let selectedDateTo = ''; // 'YYYY-MM-DD' or ''
@@ -357,13 +357,19 @@
     }
   }
 
-  // Helper: check if transaction is fixed rent or bills
+  // Helper: check if transaction is fixed rent or bills (one-time monthly commitments)
   function isFixedBillOrRent(item) {
     if (!item) return false;
-    const cat = (item.category || '').toLowerCase();
-    if (cat.includes('rent') || cat.includes('bills & utilities') || cat === 'housing') return true;
+    const cat = (item.category || '').toLowerCase().trim();
+    if (cat.includes('rent') || cat.includes('bills & utilities') || cat.includes('bill') || cat.includes('utility') || cat === 'housing') return true;
     const text = `${item.title || ''} ${item.notes || ''}`.toLowerCase();
-    const keywords = ['rent', 'house rent', 'room rent', 'pg rent', 'electricity', 'tneb', 'bescom', 'broadband', 'wifi', 'gas cylinder', 'maintenance', 'water bill', 'eb bill'];
+    const keywords = [
+      'rent', 'house rent', 'room rent', 'pg rent', 'flat rent',
+      'bill', 'bills', 'electricity', 'tneb', 'bescom', 'eb bill', 'power bill',
+      'broadband', 'wifi', 'internet', 'fiber', 'airtel', 'jio fiber', 'act fibernet',
+      'gas cylinder', 'lpg', 'indane', 'hp gas', 'bharat gas', 'gas bill',
+      'maintenance', 'water bill', 'dth', 'tata sky', 'recharge', 'mobile bill'
+    ];
     return keywords.some(k => text.includes(k));
   }
 
@@ -617,11 +623,15 @@
 
     kpiDailyAvg.textContent = formatINR(netDailyAvg);
     const projected = netDailyAvg * daysInPeriod;
-    kpiProjectedTotal.innerHTML = `<span>Projected: <strong class="text-slate-200 mono">${formatINR(projected)}</strong></span>`;
+    if (excludeFixedBills && fixedBillsAmount > 0) {
+      kpiProjectedTotal.innerHTML = `<span>Projected: <strong class="text-slate-200 mono">${formatINR(projected)}</strong> <span class="text-[9px] text-slate-400 font-normal">(excl. bills)</span></span>`;
+    } else {
+      kpiProjectedTotal.innerHTML = `<span>Projected: <strong class="text-slate-200 mono">${formatINR(projected)}</strong></span>`;
+    }
 
     if (kpiGrossAvgSubtext) {
       if (excludeFixedBills && fixedBillsAmount > 0) {
-        kpiGrossAvgSubtext.innerHTML = `<span>Gross: ${formatINR(grossDailyAvg)}/day <span class="text-emerald-400 font-semibold">(Saved ₹${Math.round(fixedBillsAmount).toLocaleString('en-IN')} rent/bills)</span></span>`;
+        kpiGrossAvgSubtext.innerHTML = `<span>Gross Avg: ${formatINR(grossDailyAvg)}/day <span class="text-emerald-400 font-semibold">(–₹${Math.round(fixedBillsAmount).toLocaleString('en-IN')} bills/rent)</span></span>`;
         kpiGrossAvgSubtext.classList.remove('hidden');
       } else {
         kpiGrossAvgSubtext.innerHTML = `<span>Gross Avg: ${formatINR(grossDailyAvg)}/day</span>`;
