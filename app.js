@@ -632,9 +632,9 @@
       excludeBillsBadgeText.textContent = excludeFixedBills ? 'Excl. Rent/Bills' : 'All Expenses';
       if (toggleExcludeFixedBillsBtn) {
         if (excludeFixedBills) {
-          toggleExcludeFixedBillsBtn.className = 'text-[9px] px-2 py-0.5 rounded-full font-bold transition bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 active:scale-95 cursor-pointer';
+          toggleExcludeFixedBillsBtn.className = 'text-[8px] sm:text-[9px] px-1.5 sm:px-2 py-0.5 rounded-full font-bold transition bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 active:scale-95 cursor-pointer whitespace-nowrap self-start inline-flex items-center shrink-0';
         } else {
-          toggleExcludeFixedBillsBtn.className = 'text-[9px] px-2 py-0.5 rounded-full font-bold transition bg-slate-500/15 text-slate-400 border border-slate-500/30 active:scale-95 cursor-pointer';
+          toggleExcludeFixedBillsBtn.className = 'text-[8px] sm:text-[9px] px-1.5 sm:px-2 py-0.5 rounded-full font-bold transition bg-slate-500/15 text-slate-400 border border-slate-500/30 active:scale-95 cursor-pointer whitespace-nowrap self-start inline-flex items-center shrink-0';
         }
       }
     }
