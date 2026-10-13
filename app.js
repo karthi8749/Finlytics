@@ -563,11 +563,12 @@
     }
 
     budgetProgressBar.style.width = Math.min(100, Math.max(0, pctUsed)) + '%';
-    kpiBudgetMessage.innerHTML = `
-      <span>Target: ${formatINR(targetBudget)}</span>
-      <span class="${pctUsed > 100 ? 'text-rose-500 font-bold' : ''}">${pctUsed.toFixed(1)}% used</span>
-      <span id="kpiBurnRateEstimate" class="hidden"></span>
-    `;
+    if (kpiBudgetMessage) {
+      kpiBudgetMessage.innerHTML = `
+        <span>Target: ${formatINR(targetBudget)}</span>
+        <span class="${pctUsed > 100 ? 'text-rose-500 font-bold' : ''}">${pctUsed.toFixed(1)}% used</span>
+      `;
+    }
 
     // Calculate Fixed Rent & Bills in this filtered list
     let fixedBillsAmount = 0;
@@ -739,30 +740,37 @@
 
     if (kpiVelocityBadge) {
       if (targetBudget <= 0) {
-        kpiVelocityBadge.textContent = 'No Limit Set';
-        kpiVelocityBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400';
-        if (kpiBurnRateEstimate) kpiBurnRateEstimate.textContent = 'Set monthly budget';
+        kpiVelocityBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span><span>No Budget</span>`;
+        kpiVelocityBadge.className = 'text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 whitespace-nowrap shrink-0 inline-flex items-center gap-1';
+        if (kpiBurnRateEstimate) kpiBurnRateEstimate.innerHTML = `<span>Burn: ₹${Math.round(dailyAvg)}/day</span><span>Set limit</span>`;
       } else {
-        // How many days left in the month
         const daysLeft = Math.max(1, daysInPeriod - daysPassed);
         const remainingBudget = targetBudget - totalSpent;
-        
-        if (remainingBudget <= 0) {
-          kpiVelocityBadge.textContent = 'Budget Exceeded 🔥';
-          kpiVelocityBadge.className = 'text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-rose-500/15 text-rose-500 whitespace-nowrap shrink-0 inline-flex items-center';
-          if (kpiBurnRateEstimate) kpiBurnRateEstimate.textContent = `Over limit by ${formatINR(Math.abs(remainingBudget))}`;
-        } else {
-          const burnDaysLeft = dailyAvg > 0 ? (remainingBudget / dailyAvg) : 999;
+        const burnRatePerDay = Math.round(dailyAvg);
 
-          if (burnDaysLeft < daysLeft) {
-            const outDate = Math.min(daysInPeriod, Math.round(daysPassed + burnDaysLeft));
-            kpiVelocityBadge.textContent = `Fast Burn Rate ⚡`;
-            kpiVelocityBadge.className = 'text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400 whitespace-nowrap shrink-0 inline-flex items-center';
-            if (kpiBurnRateEstimate) kpiBurnRateEstimate.textContent = `Exhausts around day ${outDate}`;
+        if (remainingBudget <= 0) {
+          kpiVelocityBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span><span>Critical Burn 🔥</span>`;
+          kpiVelocityBadge.className = 'text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-rose-500/15 text-rose-500 whitespace-nowrap shrink-0 inline-flex items-center gap-1';
+          if (kpiBurnRateEstimate) {
+            kpiBurnRateEstimate.innerHTML = `<span>Burn: ₹${burnRatePerDay}/day</span><span class="text-rose-400 font-semibold">Exceeded by ${formatINR(Math.abs(remainingBudget))}</span>`;
+          }
+        } else {
+          const burnDaysRemaining = dailyAvg > 0 ? (remainingBudget / dailyAvg) : 999;
+
+          if (burnDaysRemaining < daysLeft) {
+            const outDays = Math.max(1, Math.round(burnDaysRemaining));
+            kpiVelocityBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping"></span><span>Fast Burn Rate ⚡</span>`;
+            kpiVelocityBadge.className = 'text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400 whitespace-nowrap shrink-0 inline-flex items-center gap-1';
+            if (kpiBurnRateEstimate) {
+              kpiBurnRateEstimate.innerHTML = `<span>Burn: ₹${burnRatePerDay}/day</span><span class="text-amber-400 font-medium">Out in ~${outDays}d (${daysLeft}d left)</span>`;
+            }
           } else {
-            kpiVelocityBadge.textContent = `Safe Pace 🛡️`;
-            kpiVelocityBadge.className = 'text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 whitespace-nowrap shrink-0 inline-flex items-center';
-            if (kpiBurnRateEstimate) kpiBurnRateEstimate.textContent = `Safe: ₹${(remainingBudget / daysLeft).toFixed(0)}/day left`;
+            const safeDailyAllowance = Math.round(remainingBudget / daysLeft);
+            kpiVelocityBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span><span>Safe Burn Rate 🛡️</span>`;
+            kpiVelocityBadge.className = 'text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 whitespace-nowrap shrink-0 inline-flex items-center gap-1';
+            if (kpiBurnRateEstimate) {
+              kpiBurnRateEstimate.innerHTML = `<span>Burn: ₹${burnRatePerDay}/day</span><span class="text-emerald-400 font-medium">Safe: ₹${safeDailyAllowance}/d left</span>`;
+            }
           }
         }
       }
