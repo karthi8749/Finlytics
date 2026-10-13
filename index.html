@@ -100,6 +100,10 @@
     }
     .date-box-wrapper input[type="date"] {
       cursor: pointer;
+      min-width: 0;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
     }
     /* Expand native date picker click area over entire input */
     .date-box-wrapper input[type="date"]::-webkit-calendar-picker-indicator {
@@ -112,6 +116,10 @@
       height: 100%;
       opacity: 0;
       cursor: pointer;
+    }
+    .date-box-wrapper input[type="date"]::-webkit-inner-spin-button,
+    .date-box-wrapper input[type="date"]::-webkit-clear-button {
+      display: none;
     }
   </style>
 </head>
@@ -134,12 +142,12 @@
       <!-- Actions: Month Filter, Theme Toggle, Quick Add & 3-Dots Menu -->
       <div class="flex items-center gap-1 sm:gap-2 shrink-0">
         <!-- Date Range Filter (Mobile-Optimized From & To Date Selector) -->
-        <div class="relative shrink-0 flex items-center gap-1 sm:gap-1.5 bg-white dark:bg-slate-800/95 border border-slate-200 dark:border-slate-700/80 rounded-xl p-1 shadow-sm transition max-w-[210px] sm:max-w-none" id="dateRangeContainer">
+        <div class="relative shrink-0 flex items-center gap-1 sm:gap-1.5 bg-white dark:bg-slate-800/95 border border-slate-200 dark:border-slate-700/80 rounded-xl p-1 shadow-sm transition" id="dateRangeContainer">
           <div class="flex items-center gap-1 min-w-0">
             <!-- FROM Date Dial Box -->
             <div id="fromDateBox" class="date-box-wrapper flex items-center gap-1 bg-slate-50 dark:bg-slate-900/90 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-1.5 py-1 transition group">
               <span class="text-[9px] uppercase tracking-wider text-emerald-500 font-extrabold shrink-0">From</span>
-              <input type="date" id="filterFromDate" class="w-20 sm:w-24 bg-transparent text-[11px] font-mono text-slate-800 dark:text-slate-100 focus:outline-none cursor-pointer" title="Tap to select From Date" />
+              <input type="date" id="filterFromDate" class="w-[72px] sm:w-24 bg-transparent text-[10px] sm:text-[11px] font-mono text-slate-800 dark:text-slate-100 focus:outline-none cursor-pointer" title="Tap to select From Date" />
             </div>
 
             <span class="text-slate-400 font-bold text-[10px] shrink-0">→</span>
@@ -147,7 +155,7 @@
             <!-- TO Date Dial Box -->
             <div id="toDateBox" class="date-box-wrapper flex items-center gap-1 bg-slate-50 dark:bg-slate-900/90 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-1.5 py-1 transition group">
               <span class="text-[9px] uppercase tracking-wider text-emerald-500 font-extrabold shrink-0">To</span>
-              <input type="date" id="filterToDate" class="w-20 sm:w-24 bg-transparent text-[11px] font-mono text-slate-800 dark:text-slate-100 focus:outline-none cursor-pointer" title="Tap to select To Date" />
+              <input type="date" id="filterToDate" class="w-[72px] sm:w-24 bg-transparent text-[10px] sm:text-[11px] font-mono text-slate-800 dark:text-slate-100 focus:outline-none cursor-pointer" title="Tap to select To Date" />
             </div>
           </div>
 
@@ -259,9 +267,9 @@
 
       <!-- Card 2: Budget & Spending Velocity Burn Rate -->
       <div class="bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-4 sm:p-5 relative overflow-hidden shadow-sm">
-        <div class="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs font-semibold mb-2">
-          <span>Budget Remaining</span>
-          <span id="kpiVelocityBadge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400">Normal Pace</span>
+        <div class="flex items-start justify-between text-slate-500 dark:text-slate-400 text-xs font-semibold mb-2 gap-1 flex-wrap">
+          <span class="truncate">Budget Left</span>
+          <span id="kpiVelocityBadge" class="text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 whitespace-nowrap inline-flex items-center shrink-0">Normal Pace</span>
         </div>
         <div class="text-xl sm:text-2xl lg:text-3xl font-extrabold mono text-emerald-500" id="kpiRemainingBudget">
           ₹0.00

@@ -728,7 +728,7 @@
         
         if (remainingBudget <= 0) {
           kpiVelocityBadge.textContent = 'Budget Exceeded 🔥';
-          kpiVelocityBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-500';
+          kpiVelocityBadge.className = 'text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-rose-500/15 text-rose-500 whitespace-nowrap shrink-0 inline-flex items-center';
           if (kpiBurnRateEstimate) kpiBurnRateEstimate.textContent = `Over limit by ${formatINR(Math.abs(remainingBudget))}`;
         } else {
           const burnDaysLeft = dailyAvg > 0 ? (remainingBudget / dailyAvg) : 999;
@@ -736,11 +736,11 @@
           if (burnDaysLeft < daysLeft) {
             const outDate = Math.min(daysInPeriod, Math.round(daysPassed + burnDaysLeft));
             kpiVelocityBadge.textContent = `Fast Burn Rate ⚡`;
-            kpiVelocityBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400';
+            kpiVelocityBadge.className = 'text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400 whitespace-nowrap shrink-0 inline-flex items-center';
             if (kpiBurnRateEstimate) kpiBurnRateEstimate.textContent = `Exhausts around day ${outDate}`;
           } else {
             kpiVelocityBadge.textContent = `Safe Pace 🛡️`;
-            kpiVelocityBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400';
+            kpiVelocityBadge.className = 'text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 whitespace-nowrap shrink-0 inline-flex items-center';
             if (kpiBurnRateEstimate) kpiBurnRateEstimate.textContent = `Safe: ₹${(remainingBudget / daysLeft).toFixed(0)}/day left`;
           }
         }
