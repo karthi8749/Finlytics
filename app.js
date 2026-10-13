@@ -99,6 +99,8 @@
   const kpiProjectedTotal = document.getElementById('kpiProjectedTotal');
   const toggleExcludeFixedBillsBtn = document.getElementById('toggleExcludeFixedBillsBtn');
   const excludeBillsBadgeText = document.getElementById('excludeBillsBadgeText');
+  const excludeBillsSwitchTrack = document.getElementById('excludeBillsSwitchTrack');
+  const excludeBillsSwitchKnob = document.getElementById('excludeBillsSwitchKnob');
   const kpiGrossAvgSubtext = document.getElementById('kpiGrossAvgSubtext');
   const kpiTopCategory = document.getElementById('kpiTopCategory');
   const kpiTopCategoryAmount = document.getElementById('kpiTopCategoryAmount');
@@ -638,13 +640,22 @@
       }
     }
 
-    if (excludeBillsBadgeText) {
-      excludeBillsBadgeText.textContent = excludeFixedBills ? 'Excl. Rent/Bills' : 'All Expenses';
-      if (toggleExcludeFixedBillsBtn) {
-        if (excludeFixedBills) {
-          toggleExcludeFixedBillsBtn.className = 'text-[8px] sm:text-[9px] px-1.5 sm:px-2 py-0.5 rounded-full font-bold transition bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 active:scale-95 cursor-pointer whitespace-nowrap self-start inline-flex items-center shrink-0';
-        } else {
-          toggleExcludeFixedBillsBtn.className = 'text-[8px] sm:text-[9px] px-1.5 sm:px-2 py-0.5 rounded-full font-bold transition bg-slate-500/15 text-slate-400 border border-slate-500/30 active:scale-95 cursor-pointer whitespace-nowrap self-start inline-flex items-center shrink-0';
+    if (toggleExcludeFixedBillsBtn) {
+      if (excludeFixedBills) {
+        toggleExcludeFixedBillsBtn.className = 'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-bold transition active:scale-95 cursor-pointer bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 self-start shrink-0 shadow-xs';
+        if (excludeBillsSwitchTrack) excludeBillsSwitchTrack.className = 'w-6 h-3.5 rounded-full flex items-center p-0.5 transition-colors bg-emerald-500';
+        if (excludeBillsSwitchKnob) excludeBillsSwitchKnob.className = 'w-2.5 h-2.5 rounded-full bg-white transition-transform translate-x-2.5 shadow-xs';
+        if (excludeBillsBadgeText) {
+          excludeBillsBadgeText.textContent = 'Excl. Bills';
+          excludeBillsBadgeText.className = 'text-emerald-400 font-semibold whitespace-nowrap';
+        }
+      } else {
+        toggleExcludeFixedBillsBtn.className = 'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-bold transition active:scale-95 cursor-pointer bg-slate-500/10 text-slate-400 border border-slate-500/30 self-start shrink-0 shadow-xs';
+        if (excludeBillsSwitchTrack) excludeBillsSwitchTrack.className = 'w-6 h-3.5 rounded-full flex items-center p-0.5 transition-colors bg-slate-600';
+        if (excludeBillsSwitchKnob) excludeBillsSwitchKnob.className = 'w-2.5 h-2.5 rounded-full bg-slate-300 transition-transform translate-x-0 shadow-xs';
+        if (excludeBillsBadgeText) {
+          excludeBillsBadgeText.textContent = 'All Expenses';
+          excludeBillsBadgeText.className = 'text-slate-400 font-semibold whitespace-nowrap';
         }
       }
     }
