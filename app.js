@@ -298,6 +298,18 @@
             }
           }
 
+          // Strip 'Paid to ' prefix from title if present
+          if (e.title && /^paid\s+to\s+/i.test(e.title)) {
+            e.title = e.title.replace(/^paid\s+to\s+/i, '').replace(/\s+UPI:.*$/i, '').trim();
+            migrated = true;
+          }
+
+          // Strip footer disclaimers from notes
+          if (e.notes && /note:\s*this statement reflects/i.test(e.notes)) {
+            e.notes = e.notes.replace(/\s*note:\s*this statement reflects.*$/i, '').trim();
+            migrated = true;
+          }
+
           // Clean merchant title using raw notes or existing title
           const cleaned = cleanMerchantTitle(e.notes || e.title);
           if (cleaned && cleaned !== e.title && cleaned.length >= 2) {
@@ -2233,6 +2245,20 @@
     // Strip trailing dashes/placeholders like ' - -' or ' --' or ' -'
     s = s.replace(/\s*-\s*-+\s*$/g, '').trim();
 
+    // Remove Google Pay / UPI "Paid to " prefix e.g. "Paid to Reeta UPI: State Bank of In" -> "Reeta"
+    if (/^paid\s+to\s+/i.test(s)) {
+      s = s.replace(/^paid\s+to\s+/i, '').trim();
+      // Remove trailing UPI ID or Bank suffixes like " | UPI: 123..." or " UPI: State Bank..."
+      s = s.replace(/\s*\|\s*UPI:.*$/i, '')
+           .replace(/\s*\|\s*Paid\s+by.*$/i, '')
+           .replace(/\s+UPI:\s*.*$/i, '')
+           .replace(/\s+Paid\s+by\s*.*$/i, '')
+           .trim();
+      if (s.length >= 2) {
+        return s.length > 35 ? s.substring(0, 35) : s;
+      }
+    }
+
     // SBI UPI Slash Format (Very Common in SBI Statements):
     // E.g. "UPI/DR/627335144120/Reeta/YES - -"
     // E.g. "UPI/DR/663979246860/KALA - -"
@@ -2685,13 +2711,16 @@
             while (j < allPagesLines.length) {
               const nextLineStr = allPagesLines[j].map(it => it.str).join(' ').trim();
               if (gpayDateOnlyRegex.test(nextLineStr)) break; // next transaction started
-              if (/powered by upi|page \d+ of \d+|transaction statement period/i.test(nextLineStr)) {
+              if (/powered by upi|page \d+ of \d+|transaction statement period|^note:/i.test(nextLineStr)) {
                 j++;
                 continue;
               }
               txnLines.push(nextLineStr);
-              // Stop after finding paid by/paid to or 5 lines max
-              if (txnLines.length >= 6) break;
+              // Stop after finding paid by or 5 lines max
+              if (/paid by/i.test(nextLineStr) || txnLines.length >= 6) {
+                j++;
+                break;
+              }
               j++;
             }
 
@@ -2730,12 +2759,15 @@
 
               // Extract Payment Bank if available (e.g. Paid by State Bank of India 7944)
               let bankInfo = '';
-              const bankMatch = combinedBlock.match(/paid by\s+([^₹\n\r]+?)(?:\s*₹|\s*$)/i);
+              const bankMatch = combinedBlock.match(/paid by\s+([^₹\n\r]+?)(?:\s*note:|\s*₹|\s*$)/i);
               if (bankMatch && bankMatch[1]) {
-                bankInfo = bankMatch[1].trim();
+                bankInfo = bankMatch[1].replace(/note:.*$/i, '').trim();
               }
 
-              const fullNotes = `Paid to ${payee}${upiId ? ' | UPI: ' + upiId : ''}${bankInfo ? ' | ' + bankInfo : ''}`;
+              // Strip footer disclaimer if it leaked into payee
+              payee = payee.replace(/note:.*$/i, '').trim();
+
+              const fullNotes = `${payee}${upiId ? ' | UPI: ' + upiId : ''}${bankInfo ? ' | ' + bankInfo : ''}`;
               const category = categorizeTransaction(`${payee} ${fullNotes}`);
 
               parsedTransactions.push({
@@ -3045,9 +3077,15 @@
             return true;
           })
           .map((t, idx) => {
-            const cleanTitle = cleanMerchantTitle(t.narration);
-            const category = categorizeTransaction(t.narration);
-            const paymentMode = detectPaymentMode(t.narration);
+            let cleanTitle = t.title ? t.title.replace(/^paid\s+to\s+/i, '').trim() : cleanMerchantTitle(t.narration);
+            if (!cleanTitle || cleanTitle === 'Expense') {
+              cleanTitle = cleanMerchantTitle(t.narration);
+            }
+            // Strip any remaining 'Paid to ' prefix
+            cleanTitle = cleanTitle.replace(/^paid\s+to\s+/i, '').trim();
+
+            const category = t.category || categorizeTransaction(t.narration);
+            const paymentMode = t.paymentMode || detectPaymentMode(t.narration);
             totalDebitSum += t.amount;
 
             return {
