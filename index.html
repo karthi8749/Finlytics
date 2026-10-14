@@ -322,8 +322,18 @@
           <div class="text-xl sm:text-2xl lg:text-3xl font-extrabold mono text-slate-900 dark:text-white" id="kpiDailyAvg">
             ₹0.00
           </div>
+          <!-- Today's Spend Meter (Morning/Afternoon tracking vs Daily Limit) -->
+          <div class="mt-2.5">
+            <div class="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+              <div id="todaySpendProgressBar" class="bg-emerald-500 h-full w-0 transition-all duration-500"></div>
+            </div>
+            <div class="text-[10px] flex items-center justify-between mt-1 text-slate-400" id="todaySpendStatusRow">
+              <span id="todaySpentText">Today: ₹0</span>
+              <span id="todayRemainingText" class="font-semibold text-emerald-400">Left: ₹0</span>
+            </div>
+          </div>
         </div>
-        <div class="text-[10px] text-slate-400 mt-2 space-y-0.5">
+        <div class="text-[10px] text-slate-400 mt-2 pt-2 border-t border-slate-100 dark:border-slate-800/80 space-y-0.5">
           <div class="flex items-center justify-between" id="kpiProjectedTotal">
             <span>Projected: ₹0</span>
           </div>

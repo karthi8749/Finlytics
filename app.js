@@ -102,6 +102,9 @@
   const excludeBillsSwitchTrack = document.getElementById('excludeBillsSwitchTrack');
   const excludeBillsSwitchKnob = document.getElementById('excludeBillsSwitchKnob');
   const kpiGrossAvgSubtext = document.getElementById('kpiGrossAvgSubtext');
+  const todaySpendProgressBar = document.getElementById('todaySpendProgressBar');
+  const todaySpentText = document.getElementById('todaySpentText');
+  const todayRemainingText = document.getElementById('todayRemainingText');
   const kpiTopCategory = document.getElementById('kpiTopCategory');
   const kpiTopCategoryAmount = document.getElementById('kpiTopCategoryAmount');
   const peakDayLabel = document.getElementById('peakDayLabel');
@@ -630,6 +633,52 @@
       kpiProjectedTotal.innerHTML = `<span>Projected: <strong class="text-slate-200 mono">${formatINR(projected)}</strong> <span class="text-[9px] text-slate-400 font-normal">(excl. bills)</span></span>`;
     } else {
       kpiProjectedTotal.innerHTML = `<span>Projected: <strong class="text-slate-200 mono">${formatINR(projected)}</strong></span>`;
+    }
+
+    // --- Today's Live Spend & Remaining Allowance Tracking ---
+    // Calculate total spend made specifically today (e.g. morning + afternoon expenses)
+    let todaySpent = 0;
+    filteredList.forEach(item => {
+      if (item.date === todayISO) {
+        if (!excludeFixedBills || !isFixedBillOrRent(item)) {
+          todaySpent += Number(item.amount) || 0;
+        }
+      }
+    });
+
+    // Reference daily target: Use netDailyAvg, or budget daily allowance
+    const remainingBudget = Math.max(0, targetBudget - totalSpent);
+    const daysLeft = Math.max(1, daysInPeriod - daysPassed);
+    const dailyTargetLimit = (targetBudget > 0 && remainingBudget > 0)
+      ? (remainingBudget / daysLeft)
+      : (netDailyAvg > 0 ? netDailyAvg : 500);
+
+    const todayRemaining = dailyTargetLimit - todaySpent;
+    const todayPctUsed = dailyTargetLimit > 0 ? (todaySpent / dailyTargetLimit) * 100 : 0;
+
+    if (todaySpentText) {
+      todaySpentText.textContent = `Today: ₹${Math.round(todaySpent)}`;
+    }
+
+    if (todayRemainingText) {
+      if (todayRemaining >= 0) {
+        todayRemainingText.innerHTML = `Left: <span class="mono font-bold text-emerald-400">₹${Math.round(todayRemaining)}</span>`;
+        todayRemainingText.className = 'font-semibold text-emerald-400';
+      } else {
+        todayRemainingText.innerHTML = `Exceeded: <span class="mono font-bold text-rose-500">₹${Math.round(Math.abs(todayRemaining))}</span>`;
+        todayRemainingText.className = 'font-semibold text-rose-500';
+      }
+    }
+
+    if (todaySpendProgressBar) {
+      todaySpendProgressBar.style.width = Math.min(100, Math.max(0, todayPctUsed)) + '%';
+      if (todayPctUsed > 100) {
+        todaySpendProgressBar.className = 'bg-rose-500 h-full transition-all duration-500';
+      } else if (todayPctUsed > 75) {
+        todaySpendProgressBar.className = 'bg-amber-400 h-full transition-all duration-500';
+      } else {
+        todaySpendProgressBar.className = 'bg-emerald-500 h-full transition-all duration-500';
+      }
     }
 
     if (kpiGrossAvgSubtext) {
