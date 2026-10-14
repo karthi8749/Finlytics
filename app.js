@@ -2649,12 +2649,118 @@
         }
       }
 
-      // --- STRATEGY 1: Dynamic Header-Based Column Detection ---
-      // Scan lines for a header row that contains keywords like 'date', 'withdrawal'/'debit', 'narration'/'description'
+      // --- STRATEGY 0: Dedicated Google Pay (GPay) Statement Detection & Parser ---
+      // Check if document is a Google Pay transaction statement
+      const fullDocTextSample = allPagesLines.slice(0, 30).map(l => l.map(it => it.str).join(' ')).join(' ').toLowerCase();
+      const isGooglePayStatement = fullDocTextSample.includes('google pay') ||
+        (fullDocTextSample.includes('transaction statement') && fullDocTextSample.includes('upi transaction id')) ||
+        (fullDocTextSample.includes('paid to') && fullDocTextSample.includes('received from'));
+
+      if (isGooglePayStatement) {
+        detectedBankName = 'Google Pay (UPI)';
+
+        // In Google Pay statements, each transaction row typically has:
+        // - A Date & Time cell (e.g. "02 Sep, 2026", "08:02 PM")
+        // - A Transaction Details block (e.g. "Paid to PRABAKARAN B", "UPI Transaction ID: ...", "Paid by State Bank of India ...")
+        // - An Amount cell (e.g. "₹70", "₹447.46", "₹14")
+        // Let's parse each transaction block reliably.
+
+        const gpayDateRegex = /^(\d{1,2})\s*([A-Za-z]{3}),?\s*(\d{4})$/;
+        const gpayDateOnlyRegex = /\b(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*,?\s+(\d{4})\b/i;
+
+        for (let i = 0; i < allPagesLines.length; i++) {
+          const lineItems = allPagesLines[i];
+          const lineStr = lineItems.map(it => it.str).join(' ').trim();
+
+          // Check if this line starts a transaction by looking for "DD Mon, YYYY" or "DD Mon YYYY"
+          const dateMatch = lineStr.match(gpayDateOnlyRegex);
+
+          if (dateMatch) {
+            const rawDateStr = `${dateMatch[1]} ${dateMatch[2]} ${dateMatch[3]}`;
+            const isoDate = parseBankDate(rawDateStr);
+
+            // Accumulate transaction lines until the next date or end of block
+            let txnLines = [lineStr];
+            let j = i + 1;
+            while (j < allPagesLines.length) {
+              const nextLineStr = allPagesLines[j].map(it => it.str).join(' ').trim();
+              if (gpayDateOnlyRegex.test(nextLineStr)) break; // next transaction started
+              if (/powered by upi|page \d+ of \d+|transaction statement period/i.test(nextLineStr)) {
+                j++;
+                continue;
+              }
+              txnLines.push(nextLineStr);
+              // Stop after finding paid by/paid to or 5 lines max
+              if (txnLines.length >= 6) break;
+              j++;
+            }
+
+            const combinedBlock = txnLines.join(' ');
+
+            // Check if this is an expense ("Paid to ...")
+            // Google Pay uses "Paid to <Merchant/Person>" for Debits, "Received from <Person>" for Credits
+            const isPaidTo = /\bpaid to\b/i.test(combinedBlock);
+            const isReceivedFrom = /\breceived from\b/i.test(combinedBlock);
+
+            // Extract Amount (e.g. ₹70, ₹447.46, or raw number at rightmost)
+            let amount = 0;
+            const amtMatch = combinedBlock.match(/₹\s*([\d,]+(?:\.\d{1,2})?)/);
+            if (amtMatch) {
+              amount = parseAmount(amtMatch[1]);
+            } else {
+              // Try finding numeric value
+              const nums = combinedBlock.match(/\b([\d,]+\.\d{2})\b/);
+              if (nums) amount = parseAmount(nums[1]);
+            }
+
+            if (isPaidTo && amount > 0) {
+              // Extract Merchant / Payee name
+              let payee = 'Expense';
+              const paidToMatch = combinedBlock.match(/paid to\s+([^₹\n\r]+?)(?:\s+upi transaction id|\s+paid by|\s*₹|\s*$)/i);
+              if (paidToMatch && paidToMatch[1]) {
+                payee = paidToMatch[1].replace(/₹.*$/, '').trim();
+              }
+
+              // Extract UPI Transaction ID if available
+              let upiId = '';
+              const upiMatch = combinedBlock.match(/upi transaction id:\s*(\d+)/i);
+              if (upiMatch && upiMatch[1]) {
+                upiId = upiMatch[1];
+              }
+
+              // Extract Payment Bank if available (e.g. Paid by State Bank of India 7944)
+              let bankInfo = '';
+              const bankMatch = combinedBlock.match(/paid by\s+([^₹\n\r]+?)(?:\s*₹|\s*$)/i);
+              if (bankMatch && bankMatch[1]) {
+                bankInfo = bankMatch[1].trim();
+              }
+
+              const fullNotes = `Paid to ${payee}${upiId ? ' | UPI: ' + upiId : ''}${bankInfo ? ' | ' + bankInfo : ''}`;
+              const category = categorizeTransaction(`${payee} ${fullNotes}`);
+
+              parsedTransactions.push({
+                date: isoDate,
+                narration: fullNotes,
+                title: payee,
+                category: category,
+                paymentMode: 'UPI',
+                amount: amount,
+                isDebit: true
+              });
+            }
+
+            i = j - 1; // Advance loop to end of current transaction
+          }
+        }
+      }
+
+      // --- STRATEGY 1: Dynamic Header-Based Column Detection (For SBI, HDFC, ICICI, etc.) ---
+      // Only execute if not already parsed by dedicated Google Pay parser
       let headerLineIdx = -1;
       let colBounds = { date: null, narration: null, withdrawal: null, deposit: null, balance: null, refno: null, valueDate: null };
 
-      for (let i = 0; i < allPagesLines.length; i++) {
+      if (parsedTransactions.length === 0) {
+        for (let i = 0; i < allPagesLines.length; i++) {
         const lineItems = allPagesLines[i];
         const fullText = lineItems.map(it => it.str).join(' ').toLowerCase();
 
@@ -2859,6 +2965,7 @@
           parsedTransactions.push(currentTxn);
         }
       }
+    }
 
       // --- STRATEGY 2: Fallback text-line based extraction if Strategy 1 found nothing ---
       if (parsedTransactions.length === 0) {
