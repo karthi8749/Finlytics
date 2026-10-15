@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Finlytics Widget</title>
+  <link rel="icon" type="image/png" href="icon-192.png" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+  </style>
+</head>
+<body class="bg-transparent p-2 flex items-center justify-center min-h-screen">
+
+  <!-- Compact Widget Container (Tailored specifically for Home Screen Web Widgets) -->
+  <div class="w-full max-w-sm bg-[#0e1420]/95 backdrop-blur-xl border border-slate-800/90 rounded-3xl p-4 shadow-2xl text-white relative overflow-hidden">
+    
+    <!-- Header Row -->
+    <div class="flex items-center justify-between pb-3 border-b border-slate-800/80 mb-3">
+      <div class="flex items-center gap-2">
+        <div class="w-7 h-7 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+          <i data-lucide="wallet" class="w-4 h-4 text-slate-950 font-bold"></i>
+        </div>
+        <div>
+          <span class="text-xs font-extrabold tracking-wide text-white">FINLYTICS</span>
+          <span class="text-[9px] text-emerald-400 font-semibold block leading-none" id="widgetDate">Today</span>
+        </div>
+      </div>
+      <a href="index.html" target="_blank" class="text-[10px] bg-slate-800/80 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-full font-semibold border border-slate-700/80 flex items-center gap-1 transition active:scale-95">
+        <span>Open</span>
+        <i data-lucide="external-link" class="w-2.5 h-2.5 text-slate-400"></i>
+      </a>
+    </div>
+
+    <!-- Main Metric 1: Today's Spend & Daily Allowance -->
+    <div class="bg-slate-900/80 border border-slate-800/70 rounded-2xl p-3.5 mb-2.5">
+      <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+        <span class="font-semibold text-slate-300">Today Spent</span>
+        <span id="widgetDailyAvgText" class="text-[10px] text-emerald-400 font-bold">Avg: ₹0/d</span>
+      </div>
+      
+      <div class="flex items-baseline justify-between mb-2">
+        <div class="text-2xl font-black mono text-white" id="widgetTodaySpent">₹0</div>
+        <div class="text-xs font-bold" id="widgetTodayRemainingWrap">
+          <span class="text-slate-400 text-[10px] font-medium">Left: </span>
+          <span class="mono text-emerald-400 font-bold" id="widgetTodayRemaining">₹0</span>
+        </div>
+      </div>
+
+      <!-- Today's Progress Bar -->
+      <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+        <div id="widgetTodayBar" class="bg-emerald-500 h-full w-0 transition-all duration-500"></div>
+      </div>
+    </div>
+
+    <!-- Metric 2: Monthly Budget Left & Burn Pace -->
+    <div class="grid grid-cols-2 gap-2">
+      <!-- Budget Left -->
+      <div class="bg-slate-900/60 border border-slate-800/60 rounded-xl p-2.5">
+        <span class="text-[10px] text-slate-400 font-semibold block mb-0.5">Budget Left</span>
+        <div class="text-base font-extrabold mono text-emerald-400" id="widgetBudgetLeft">₹0</div>
+        <div class="w-full bg-slate-800 h-1 rounded-full mt-1.5 overflow-hidden">
+          <div id="widgetBudgetBar" class="bg-emerald-400 h-full w-0 transition-all duration-500"></div>
+        </div>
+      </div>
+
+      <!-- Burn Rate Pace -->
+      <div class="bg-slate-900/60 border border-slate-800/60 rounded-xl p-2.5">
+        <span class="text-[10px] text-slate-400 font-semibold block mb-0.5">Burn Speed</span>
+        <div class="text-xs font-bold text-slate-200 mt-0.5 flex items-center gap-1" id="widgetBurnSpeedBadge">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span id="widgetBurnSpeed">Safe Pace</span>
+        </div>
+        <span class="text-[9px] text-slate-400 block mt-1.5 truncate" id="widgetBurnPaceSub">Limit safe</span>
+      </div>
+    </div>
+
+    <!-- Quick Add Button in Widget -->
+    <a href="index.html" class="w-full mt-3 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-500/20 active:scale-95 transition">
+      <i data-lucide="plus" class="w-3.5 h-3.5 stroke-[3]"></i>
+      <span>Add Expense</span>
+    </a>
+
+  </div>
+
+  <script>
+    // Load data from Finlytics local storage
+    function refreshWidget() {
+      try {
+        const STORAGE_KEY_EXPENSES = 'finlytics_expenses_v1';
+        const STORAGE_KEY_BUDGET = 'finlytics_monthly_budget_v1';
+        const STORAGE_KEY_SALARY_CYCLE = 'finlytics_salary_cycle_v1';
+        const STORAGE_KEY_EXCLUDE_BILLS = 'finlytics_exclude_bills_v1';
+
+        const expenses = JSON.parse(localStorage.getItem(STORAGE_KEY_EXPENSES) || '[]');
+        const monthlyBudget = Number(localStorage.getItem(STORAGE_KEY_BUDGET)) || 35000;
+        const salaryCycleStartDay = parseInt(localStorage.getItem(STORAGE_KEY_SALARY_CYCLE) || '26', 10);
+        const excludeFixedBills = localStorage.getItem(STORAGE_KEY_EXCLUDE_BILLS) !== 'false';
+
+        const now = new Date();
+        const todayISO = now.toISOString().split('T')[0];
+        document.getElementById('widgetDate').textContent = now.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
+
+        // Calculate cycle start and end
+        const curYear = now.getFullYear();
+        const curMonth = now.getMonth();
+        let cycleStart, cycleEnd;
+        if (now.getDate() >= salaryCycleStartDay) {
+          cycleStart = new Date(curYear, curMonth, salaryCycleStartDay);
+          cycleEnd = new Date(curYear, curMonth + 1, salaryCycleStartDay - 1);
+        } else {
+          cycleStart = new Date(curYear, curMonth - 1, salaryCycleStartDay);
+          cycleEnd = new Date(curYear, curMonth, salaryCycleStartDay - 1);
+        }
+
+        const startISO = cycleStart.toISOString().split('T')[0];
+        const endISO = cycleEnd.toISOString().split('T')[0];
+
+        // Filter current cycle expenses
+        const cycleExpenses = expenses.filter(e => e.date >= startISO && e.date <= endISO);
+        const totalSpent = cycleExpenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+
+        // Fixed bills check
+        function isBillOrRent(e) {
+          const cat = (e.category || '').toLowerCase();
+          const txt = `${e.title || ''} ${e.notes || ''}`.toLowerCase();
+          if (cat.includes('rent') || cat.includes('bills & utilities') || cat === 'housing') return true;
+          return ['rent', 'electricity', 'tneb', 'wifi', 'broadband', 'gas cylinder', 'eb bill'].some(k => txt.includes(k));
+        }
+
+        const billsAmt = cycleExpenses.reduce((sum, e) => isBillOrRent(e) ? sum + Number(e.amount || 0) : sum, 0);
+        const netSpent = Math.max(0, totalSpent - (excludeFixedBills ? billsAmt : 0));
+
+        // Days passed
+        const daysPassed = Math.max(1, Math.round((now - cycleStart) / (1000 * 60 * 60 * 24)) + 1);
+        const daysInPeriod = Math.max(1, Math.round((cycleEnd - cycleStart) / (1000 * 60 * 60 * 24)) + 1);
+        const daysLeft = Math.max(1, daysInPeriod - daysPassed);
+
+        const dailyAvg = cycleExpenses.length > 0 ? (netSpent / daysPassed) : 0;
+        document.getElementById('widgetDailyAvgText').textContent = `Avg: ₹${Math.round(dailyAvg)}/d`;
+
+        // Today Spent
+        let todaySpent = 0;
+        cycleExpenses.forEach(e => {
+          if (e.date === todayISO) {
+            if (!excludeFixedBills || !isBillOrRent(e)) {
+              todaySpent += Number(e.amount) || 0;
+            }
+          }
+        });
+
+        const remainingBudget = Math.max(0, monthlyBudget - totalSpent);
+        const dailyLimit = (monthlyBudget > 0 && remainingBudget > 0)
+          ? (remainingBudget / daysLeft)
+          : (dailyAvg > 0 ? dailyAvg : 500);
+
+        const todayLeft = dailyLimit - todaySpent;
+        const todayPct = dailyLimit > 0 ? (todaySpent / dailyLimit) * 100 : 0;
+
+        document.getElementById('widgetTodaySpent').textContent = `₹${Math.round(todaySpent).toLocaleString('en-IN')}`;
+        
+        const remEl = document.getElementById('widgetTodayRemaining');
+        const remWrap = document.getElementById('widgetTodayRemainingWrap');
+        if (todayLeft >= 0) {
+          remEl.textContent = `₹${Math.round(todayLeft).toLocaleString('en-IN')}`;
+          remEl.className = 'mono text-emerald-400 font-bold';
+        } else {
+          remWrap.innerHTML = `<span class="text-rose-400 text-[10px] font-medium">Over: </span><span class="mono text-rose-500 font-bold">₹${Math.round(Math.abs(todayLeft)).toLocaleString('en-IN')}</span>`;
+        }
+
+        const todayBar = document.getElementById('widgetTodayBar');
+        todayBar.style.width = Math.min(100, Math.max(0, todayPct)) + '%';
+        if (todayPct > 100) todayBar.className = 'bg-rose-500 h-full transition-all duration-500';
+        else if (todayPct > 75) todayBar.className = 'bg-amber-400 h-full transition-all duration-500';
+        else todayBar.className = 'bg-emerald-500 h-full transition-all duration-500';
+
+        // Budget Left
+        const budgetLeftEl = document.getElementById('widgetBudgetLeft');
+        budgetLeftEl.textContent = `₹${Math.round(remainingBudget).toLocaleString('en-IN')}`;
+        const budgetBar = document.getElementById('widgetBudgetBar');
+        const budgetPct = monthlyBudget > 0 ? (totalSpent / monthlyBudget) * 100 : 0;
+        budgetBar.style.width = Math.min(100, Math.max(0, budgetPct)) + '%';
+
+        // Burn Speed
+        const burnSpeedEl = document.getElementById('widgetBurnSpeed');
+        const burnSubEl = document.getElementById('widgetBurnPaceSub');
+        if (remainingBudget <= 0) {
+          burnSpeedEl.textContent = 'Exceeded 🔥';
+          burnSpeedEl.className = 'text-rose-500 font-bold';
+          burnSubEl.textContent = 'Budget exhausted';
+        } else {
+          const burnDays = dailyAvg > 0 ? (remainingBudget / dailyAvg) : 999;
+          if (burnDays < daysLeft) {
+            burnSpeedEl.textContent = 'Fast Burn ⚡';
+            burnSpeedEl.className = 'text-amber-400 font-bold';
+            burnSubEl.textContent = `Out in ~${Math.round(burnDays)}d`;
+          } else {
+            burnSpeedEl.textContent = 'Safe Pace 🛡️';
+            burnSpeedEl.className = 'text-emerald-400 font-bold';
+            burnSubEl.textContent = `₹${Math.round(dailyLimit)}/day left`;
+          }
+        }
+
+      } catch (err) {
+        console.error('Widget render error:', err);
+      }
+    }
+
+    refreshWidget();
+    if (window.lucide) lucide.createIcons();
+    // Auto-refresh every 30 seconds
+    setInterval(refreshWidget, 30000);
+  </script>
+</body>
+</html>
