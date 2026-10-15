@@ -3819,7 +3819,7 @@
 
   window.addEventListener('appinstalled', () => {
     deferredPrompt = null;
-    console.log('Finlytics was installed successfully!');
+    console.log('Finly was installed successfully!');
   });
 
   // Header & Menu Install Button Listeners
@@ -3858,12 +3858,60 @@
 
   function showManualInstallGuide() {
     alert(
-      "📱 Install Finlytics on Android 16 / Chrome:\n\n" +
+      "📱 Install Finly on Android 16 / Chrome:\n\n" +
       "1. Tap Chrome's Top-Right 3-Dots (⋮) Menu\n" +
       "2. Select 'Install app' or 'Add to Home screen'\n" +
       "3. Tap 'Install' on the popup dialog!\n\n" +
       "💡 Pro-Tip: If you previously installed an older version, remove/uninstall the old icon from your home screen first."
     );
+  }
+
+  // --- App Opening Splash Logo Animation Controller ---
+  const splashEl = document.getElementById('appSplashScreen');
+  const navBrandLogo = document.getElementById('navBrandLogo');
+
+  function dismissSplashScreen() {
+    if (!splashEl || splashEl.dataset.dismissed === 'true') return;
+    splashEl.dataset.dismissed = 'true';
+    splashEl.style.opacity = '0';
+    splashEl.style.transform = 'scale(1.04)';
+    splashEl.style.pointerEvents = 'none';
+    setTimeout(() => {
+      splashEl.style.display = 'none';
+    }, 550);
+  }
+
+  function playSplashScreenAnimation() {
+    if (!splashEl) return;
+    splashEl.dataset.dismissed = 'false';
+    splashEl.style.display = 'flex';
+    splashEl.style.pointerEvents = 'auto';
+    splashEl.style.opacity = '1';
+    splashEl.style.transform = 'scale(1)';
+
+    const orb = splashEl.querySelector('.splash-indicator-orb');
+    const logo = splashEl.querySelector('.splash-center-logo');
+    const ripple = splashEl.querySelector('.splash-ripple');
+    const text = splashEl.querySelector('.splash-brand-text');
+
+    [orb, logo, ripple, text].forEach(el => {
+      if (el) {
+        el.style.animation = 'none';
+        void el.offsetWidth;
+        el.style.animation = '';
+      }
+    });
+
+    setTimeout(dismissSplashScreen, 1550);
+  }
+
+  if (splashEl) {
+    splashEl.addEventListener('click', dismissSplashScreen);
+    setTimeout(dismissSplashScreen, 1550);
+  }
+
+  if (navBrandLogo) {
+    navBrandLogo.addEventListener('click', playSplashScreenAnimation);
   }
 
   // --- App Bootstrap ---
