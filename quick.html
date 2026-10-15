@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Quick Spend - Finly</title>
+  <link rel="icon" type="image/png" href="icon-192.png" />
+  <link rel="manifest" href="manifest-quick.json" />
+  <meta name="theme-color" content="#070b12" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Firebase App & Realtime Database SDKs for Cross-Device Sync -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=JetBrains+Mono:wght@600;800&display=swap');
+    * {
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      touch-action: manipulation;
+    }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    .numpad-btn {
+      transition: transform 0.08s ease, background-color 0.1s ease;
+    }
+    .numpad-btn:active {
+      transform: scale(0.92);
+      background-color: rgba(16, 185, 129, 0.25) !important;
+    }
+  </style>
+</head>
+<body class="bg-[#070b12] text-white min-h-screen flex flex-col justify-between p-3 sm:p-5 overflow-hidden">
+
+  <!-- Top Bar -->
+  <div class="flex items-center justify-between pt-1 pb-2 shrink-0">
+    <div class="flex items-center gap-2">
+      <div class="w-8 h-8 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+        <i data-lucide="zap" class="w-4 h-4"></i>
+      </div>
+      <div>
+        <h1 class="text-sm font-extrabold tracking-tight text-white leading-tight">Quick Spend</h1>
+        <p class="text-[10px] text-slate-400 leading-tight" id="todayDateLabel">Today</p>
+      </div>
+    </div>
+    <a href="index.html" class="px-3 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-slate-700/80 text-[11px] font-semibold text-slate-300 flex items-center gap-1 transition active:scale-95">
+      <span>Dashboard</span>
+      <i data-lucide="arrow-right" class="w-3 h-3 text-slate-400"></i>
+    </a>
+  </div>
+
+  <!-- Amount Display Center Stage -->
+  <div class="flex-1 flex flex-col justify-center items-center py-2 shrink-0">
+    <div class="text-[11px] uppercase tracking-widest text-emerald-400 font-bold mb-1 flex items-center gap-1.5">
+      <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+      <span>Enter Amount</span>
+    </div>
+
+    <!-- Big Currency Amount Display -->
+    <div class="flex items-baseline justify-center gap-1">
+      <span class="text-2xl sm:text-3xl font-extrabold text-slate-400">₹</span>
+      <span id="amountDisplay" class="text-4xl sm:text-5xl font-black mono text-white tracking-tight">0</span>
+    </div>
+
+    <!-- Merchant Title Input (Optional quick edit) -->
+    <div class="w-full max-w-xs mt-3">
+      <input type="text" id="merchantTitleInput" placeholder="Note / Shop (e.g. Tea, Groceries, Swiggy)" class="w-full bg-slate-900/90 border border-slate-800 focus:border-emerald-500/80 rounded-xl px-3 py-2 text-xs text-center text-white placeholder-slate-500 focus:outline-none transition shadow-inner" />
+    </div>
+
+    <!-- Category Chips (Horizontal Scrollable) -->
+    <div class="w-full max-w-sm mt-3 overflow-x-auto no-scrollbar flex items-center gap-1.5 px-1 py-1">
+      <button type="button" class="cat-chip px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20 border border-emerald-400" data-cat="Food & Dining">
+        🍔 Food
+      </button>
+      <button type="button" class="cat-chip px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap bg-slate-900/90 text-slate-300 border border-slate-800 hover:border-slate-700" data-cat="Groceries">
+        🛒 Groceries
+      </button>
+      <button type="button" class="cat-chip px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap bg-slate-900/90 text-slate-300 border border-slate-800 hover:border-slate-700" data-cat="Travel & Fuel">
+        🚗 Fuel / Ride
+      </button>
+      <button type="button" class="cat-chip px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap bg-slate-900/90 text-slate-300 border border-slate-800 hover:border-slate-700" data-cat="Bills & Utilities">
+        ⚡ Bills
+      </button>
+      <button type="button" class="cat-chip px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap bg-slate-900/90 text-slate-300 border border-slate-800 hover:border-slate-700" data-cat="Shopping">
+        🛍️ Shopping
+      </button>
+      <button type="button" class="cat-chip px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap bg-slate-900/90 text-slate-300 border border-slate-800 hover:border-slate-700" data-cat="Others">
+        📦 Others
+      </button>
+    </div>
+  </div>
+
+  <!-- Touch-Friendly Full Height Numpad -->
+  <div class="w-full max-w-sm mx-auto space-y-2 shrink-0 pb-1">
+    
+    <!-- Quick Preset Row -->
+    <div class="grid grid-cols-4 gap-1.5">
+      <button type="button" class="preset-btn py-1.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-800 text-[11px] font-bold text-slate-300 mono" data-add="20">+₹20</button>
+      <button type="button" class="preset-btn py-1.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-800 text-[11px] font-bold text-slate-300 mono" data-add="50">+₹50</button>
+      <button type="button" class="preset-btn py-1.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-800 text-[11px] font-bold text-slate-300 mono" data-add="100">+₹100</button>
+      <button type="button" class="preset-btn py-1.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-800 text-[11px] font-bold text-slate-300 mono" data-add="500">+₹500</button>
+    </div>
+
+    <!-- Numeric Keypad Grid (3x4) -->
+    <div class="grid grid-cols-3 gap-2">
+      <button type="button" class="numpad-btn h-12 rounded-2xl bg-slate-900/90 border border-slate-800 text-xl font-bold mono text-white shadow-sm" data-num="1">1</button>
+      <button type="button" class="numpad-btn h-12 rounded-2xl bg-slate-900/90 border border-slate-800 text-xl font-bold mono text-white shadow-sm" data-num="2">2</button>
+      <button type="button" class="numpad-btn h-12 rounded-2xl bg-slate-900/90 border border-slate-800 text-xl font-bold mono text-white shadow-sm" data-num="3">3</button>
+
+      <button type="button" class="numpad-btn h-12 rounded-2xl bg-slate-900/90 border border-slate-800 text-xl font-bold mono text-white shadow-sm" data-num="4">4</button>
+      <button type="button" class="numpad-btn h-12 rounded-2xl bg-slate-900/90 border border-slate-800 text-xl font-bold mono text-white shadow-sm" data-num="5">5</button>
+      <button type="button" class="numpad-btn h-12 rounded-2xl bg-slate-900/90 border border-slate-800 text-xl font-bold mono text-white shadow-sm" data-num="6">6</button>
+
+      <button type="button" class="numpad-btn h-12 rounded-2xl bg-slate-900/90 border border-slate-800 text-xl font-bold mono text-white shadow-sm" data-num="7">7</button>
+      <button type="button" class="numpad-btn h-12 rounded-2xl bg-slate-900/90 border border-slate-800 text-xl font-bold mono text-white shadow-sm" data-num="8">8</button>
+      <button type="button" class="numpad-btn h-12 rounded-2xl bg-slate-900/90 border border-slate-800 text-xl font-bold mono text-white shadow-sm" data-num="9">9</button>
+
+      <button type="button" class="numpad-btn h-12 rounded-2xl bg-slate-900/90 border border-slate-800 text-xl font-bold mono text-rose-400 shadow-sm flex items-center justify-center" id="btnClear">C</button>
+      <button type="button" class="numpad-btn h-12 rounded-2xl bg-slate-900/90 border border-slate-800 text-xl font-bold mono text-white shadow-sm" data-num="0">0</button>
+      <button type="button" class="numpad-btn h-12 rounded-2xl bg-slate-900/90 border border-slate-800 text-lg font-bold text-slate-300 shadow-sm flex items-center justify-center" id="btnBackspace">
+        <i data-lucide="delete" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <!-- Big Action Button (Save Expense) -->
+    <button type="button" id="btnSaveExpense" class="w-full h-13 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 text-base font-extrabold flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/25 active:scale-95 transition mt-1">
+      <i data-lucide="check" class="w-5 h-5 stroke-[3]"></i>
+      <span id="saveBtnText">Save Expense</span>
+    </button>
+  </div>
+
+  <!-- Success Toast -->
+  <div id="successToast" class="fixed top-4 inset-x-4 max-w-sm mx-auto bg-emerald-500 text-slate-950 font-bold px-4 py-3 rounded-2xl shadow-2xl flex items-center justify-between text-xs transition-all duration-300 transform -translate-y-24 opacity-0 pointer-events-none z-50">
+    <div class="flex items-center gap-2">
+      <div class="w-5 h-5 rounded-full bg-slate-950 text-emerald-400 flex items-center justify-center">✓</div>
+      <span id="successToastText">Expense Logged Successfully!</span>
+    </div>
+    <span class="text-[10px] bg-slate-950/20 px-2 py-0.5 rounded-full font-mono">Realtime Saved</span>
+  </div>
+
+  <script>
+    const STORAGE_KEY_EXPENSES = 'finlytics_expenses_v1';
+    const STORAGE_KEY_SYNC_CONFIG = 'finlytics_sync_config_v1';
+
+    let currentAmountStr = '0';
+    let selectedCategory = 'Food & Dining';
+
+    const amountDisplay = document.getElementById('amountDisplay');
+    const merchantTitleInput = document.getElementById('merchantTitleInput');
+    const btnSaveExpense = document.getElementById('btnSaveExpense');
+    const saveBtnText = document.getElementById('saveBtnText');
+    const successToast = document.getElementById('successToast');
+    const successToastText = document.getElementById('successToastText');
+    const todayDateLabel = document.getElementById('todayDateLabel');
+
+    // Display Today's date
+    const now = new Date();
+    todayDateLabel.textContent = now.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
+
+    function updateAmountDisplay() {
+      amountDisplay.textContent = currentAmountStr || '0';
+      const amt = parseFloat(currentAmountStr || '0');
+      if (amt > 0) {
+        saveBtnText.textContent = `Save ₹${amt.toLocaleString('en-IN')}`;
+      } else {
+        saveBtnText.textContent = 'Save Expense';
+      }
+    }
+
+    // Number Buttons
+    document.querySelectorAll('[data-num]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const num = btn.getAttribute('data-num');
+        if (currentAmountStr === '0') {
+          currentAmountStr = num;
+        } else if (currentAmountStr.length < 7) {
+          currentAmountStr += num;
+        }
+        updateAmountDisplay();
+      });
+    });
+
+    // Preset Buttons (+20, +50, +100, +500)
+    document.querySelectorAll('[data-add]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const addAmt = parseInt(btn.getAttribute('data-add'), 10);
+        let curr = parseInt(currentAmountStr || '0', 10);
+        curr += addAmt;
+        currentAmountStr = String(curr);
+        updateAmountDisplay();
+      });
+    });
+
+    // Clear & Backspace
+    document.getElementById('btnClear').addEventListener('click', () => {
+      currentAmountStr = '0';
+      updateAmountDisplay();
+    });
+
+    document.getElementById('btnBackspace').addEventListener('click', () => {
+      if (currentAmountStr.length > 1) {
+        currentAmountStr = currentAmountStr.substring(0, currentAmountStr.length - 1);
+      } else {
+        currentAmountStr = '0';
+      }
+      updateAmountDisplay();
+    });
+
+    // Category Chips selection
+    document.querySelectorAll('.cat-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        document.querySelectorAll('.cat-chip').forEach(c => {
+          c.className = 'cat-chip px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap bg-slate-900/90 text-slate-300 border border-slate-800 hover:border-slate-700';
+        });
+        chip.className = 'cat-chip px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20 border border-emerald-400';
+        selectedCategory = chip.getAttribute('data-cat');
+        
+        // Auto-fill note placeholder if blank
+        if (!merchantTitleInput.value) {
+          merchantTitleInput.placeholder = `${selectedCategory} expense`;
+        }
+      });
+    });
+
+    // Save Expense
+    btnSaveExpense.addEventListener('click', () => {
+      const amt = parseFloat(currentAmountStr);
+      if (!amt || isNaN(amt) || amt <= 0) {
+        alert('Please enter an amount greater than ₹0');
+        return;
+      }
+
+      let title = (merchantTitleInput.value || '').trim();
+      if (!title) {
+        title = selectedCategory;
+      }
+
+      const today = new Date().toISOString().split('T')[0];
+      const newExpense = {
+        id: 'exp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+        title: title,
+        amount: amt,
+        category: selectedCategory,
+        paymentMode: 'UPI',
+        date: today,
+        notes: 'Logged via Quick Spend'
+      };
+
+      // 1. Save to Local Storage
+      try {
+        let expenses = [];
+        const raw = localStorage.getItem(STORAGE_KEY_EXPENSES);
+        if (raw) expenses = JSON.parse(raw);
+        expenses.unshift(newExpense);
+        localStorage.setItem(STORAGE_KEY_EXPENSES, JSON.stringify(expenses));
+      } catch (e) {
+        console.error('Failed to save expense locally', e);
+      }
+
+      // 2. Also Push to Google Firebase Cloud for Realtime Laptop Sync
+      try {
+        const syncRaw = localStorage.getItem(STORAGE_KEY_SYNC_CONFIG);
+        if (syncRaw) {
+          const cfg = JSON.parse(syncRaw);
+          if (cfg.dbUrl) {
+            if (!firebase.apps.length) {
+              firebase.initializeApp({ databaseURL: cfg.dbUrl });
+            }
+            firebase.database().ref('incoming_sms').push({
+              sms: `Paid Rs ${amt} to ${title} on ${today} via UPI`,
+              sender: 'Finly Quick Logger',
+              timestamp: Date.now()
+            });
+          }
+        }
+      } catch (err) {
+        console.warn('Cloud sync push error', err);
+      }
+
+      // Show Toast Notification
+      successToastText.textContent = `₹${amt} logged to ${selectedCategory}!`;
+      successToast.style.transform = 'translateY(0)';
+      successToast.style.opacity = '1';
+
+      // Reset
+      currentAmountStr = '0';
+      merchantTitleInput.value = '';
+      updateAmountDisplay();
+
+      setTimeout(() => {
+        successToast.style.transform = 'translateY(-6rem)';
+        successToast.style.opacity = '0';
+      }, 2200);
+    });
+
+    // Keyboard support if opened on desktop/tablet
+    document.addEventListener('keydown', (e) => {
+      if (e.target === merchantTitleInput) return;
+      if (e.key >= '0' && e.key <= '9') {
+        if (currentAmountStr === '0') currentAmountStr = e.key;
+        else if (currentAmountStr.length < 7) currentAmountStr += e.key;
+        updateAmountDisplay();
+      } else if (e.key === 'Backspace') {
+        if (currentAmountStr.length > 1) currentAmountStr = currentAmountStr.slice(0, -1);
+        else currentAmountStr = '0';
+        updateAmountDisplay();
+      } else if (e.key === 'Enter') {
+        btnSaveExpense.click();
+      }
+    });
+
+    // Icons
+    if (window.lucide) lucide.createIcons();
+  </script>
+</body>
+</html>

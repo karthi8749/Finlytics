@@ -1,11 +1,13 @@
 // Finly Service Worker
-const CACHE_NAME = 'finly-v48';
+const CACHE_NAME = 'finly-v49';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
+  './quick.html',
   './widget.html',
   './app.js',
   './manifest.json',
+  './manifest-quick.json',
   './logo.png',
   './icon-192.png',
   './icon-512.png',
