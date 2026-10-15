@@ -83,12 +83,35 @@
       width: 6px;
       height: 6px;
     }
-    ::-webkit-scrollbar-track {
-      background: transparent;
+    /* 3D Animated Character Keyframes & Floating */
+    @keyframes float3d {
+      0%, 100% {
+        transform: translateY(0px) rotate(0deg) scale(1);
+      }
+      50% {
+        transform: translateY(-7px) rotate(2deg) scale(1.03);
+      }
     }
-    ::-webkit-scrollbar-thumb {
-      background: #475569;
-      border-radius: 4px;
+    @keyframes waveHand {
+      0%, 100% { transform: rotate(0deg); }
+      20%, 60% { transform: rotate(14deg); }
+      40%, 80% { transform: rotate(-10deg); }
+    }
+    @keyframes pulseGlow {
+      0%, 100% { opacity: 0.6; transform: scale(1); }
+      50% { opacity: 0.9; transform: scale(1.06); }
+    }
+    .char-3d-floating {
+      animation: float3d 4s ease-in-out infinite;
+      will-change: transform;
+    }
+    .char-3d-glow {
+      animation: pulseGlow 3s ease-in-out infinite;
+    }
+    .wave-hand {
+      transform-origin: 70% 70%;
+      display: inline-block;
+      animation: waveHand 2.2s infinite ease-in-out;
     }
 
     /* Mobile optimized full-box tap for date inputs */
@@ -255,6 +278,68 @@
 
   <!-- Main Container (Full Width - Zero Wasted Space) -->
   <main class="w-full max-w-full px-3 sm:px-6 lg:px-8 py-3 sm:py-5 space-y-4 sm:space-y-6 overflow-x-hidden pb-24 sm:pb-6">
+
+    <!-- 3D Animated Financial Assistant Hero Companion -->
+    <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-blue-500/10 dark:from-emerald-950/40 dark:via-slate-900/60 dark:to-teal-950/30 border border-emerald-500/20 dark:border-emerald-500/30 p-3.5 sm:p-4 shadow-sm backdrop-blur-md">
+      <div class="flex items-center justify-between gap-3">
+        <!-- 3D Animated Character Avatar -->
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="relative shrink-0 w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center">
+            <!-- Ambient Glow -->
+            <div class="absolute inset-0 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 blur-md opacity-40 char-3d-glow"></div>
+            <!-- 3D Character Illustration / Floating SVG -->
+            <div class="relative w-full h-full rounded-2xl bg-gradient-to-tr from-slate-900 to-slate-800 border border-emerald-500/40 flex items-center justify-center shadow-lg char-3d-floating overflow-hidden">
+              <svg viewBox="0 0 100 100" class="w-10 h-10 sm:w-11 sm:h-11 drop-shadow-md" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <!-- 3D Cute Robot / Finance Bot Buddy -->
+                <circle cx="50" cy="50" r="38" fill="url(#botGrad)" />
+                <!-- 3D Shading highlight -->
+                <ellipse cx="40" cy="30" rx="20" ry="10" fill="white" fill-opacity="0.25" />
+                <!-- Face Visor -->
+                <rect x="26" y="34" width="48" height="26" rx="13" fill="#0b0f17" />
+                <!-- Glowing Friendly Eyes -->
+                <ellipse cx="38" cy="47" rx="5" ry="6" fill="#10b981" />
+                <ellipse cx="62" cy="47" rx="5" ry="6" fill="#10b981" />
+                <circle cx="36" cy="45" r="2" fill="#ffffff" />
+                <circle cx="60" cy="45" r="2" fill="#ffffff" />
+                <!-- Smile -->
+                <path d="M44 53 Q50 58 56 53" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" fill="none" />
+                <!-- Antenna with coin / star -->
+                <rect x="48" y="4" width="4" height="10" rx="2" fill="#34d399" />
+                <circle cx="50" cy="6" r="5" fill="#fbbf24" stroke="#f59e0b" stroke-width="1.5" />
+                <defs>
+                  <linearGradient id="botGrad" x1="15" y1="15" x2="85" y2="85" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#10b981" />
+                    <stop offset="0.5" stop-color="#059669" />
+                    <stop offset="1" stop-color="#047857" />
+                  </linearGradient>
+                </defs>
+              </svg>
+            </div>
+            <!-- Status Badge on Bot -->
+            <span class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-[#0b0f17] flex items-center justify-center">
+              <span class="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span>
+            </span>
+          </div>
+
+          <!-- Speech & Insight bubble -->
+          <div class="min-w-0">
+            <div class="flex items-center gap-1.5">
+              <span class="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white truncate">FinBot 3D</span>
+              <span class="text-[9px] px-2 py-0.5 rounded-full font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">AI Finance Buddy</span>
+            </div>
+            <p id="finbotStatusMessage" class="text-[11px] sm:text-xs text-slate-600 dark:text-slate-300 font-medium mt-0.5 truncate leading-tight">
+              Vanakkam! <span class="wave-hand">👋</span> Ungaloda daily spend & budget safe-ah control-la irukku!
+            </p>
+          </div>
+        </div>
+
+        <!-- Right Quick Action -->
+        <a href="#expenseTableBody" class="shrink-0 hidden xs:flex items-center gap-1 text-[11px] font-bold text-emerald-500 hover:text-emerald-400 bg-white dark:bg-slate-800/80 border border-emerald-500/30 px-3 py-1.5 rounded-xl shadow-xs transition active:scale-95">
+          <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-400"></i>
+          <span>Track</span>
+        </a>
+      </div>
+    </div>
 
     <!-- Section 1: KPI Cards -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -555,13 +640,37 @@
         <!-- Dynamically populated -->
       </div>
 
-      <!-- Empty State -->
-      <div id="emptyState" class="hidden py-12 text-center text-slate-400">
-        <div class="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto mb-3 text-slate-500">
-          <i data-lucide="inbox" class="w-6 h-6"></i>
+      <!-- Empty State with 3D Animated Character Mascot -->
+      <div id="emptyState" class="hidden py-10 text-center text-slate-400">
+        <div class="relative w-24 h-24 mx-auto mb-3 flex items-center justify-center">
+          <div class="absolute inset-0 rounded-full bg-emerald-500/15 blur-xl char-3d-glow"></div>
+          <div class="relative w-20 h-20 rounded-2xl bg-gradient-to-tr from-slate-900 to-slate-800 border border-slate-700/80 shadow-2xl flex items-center justify-center char-3d-floating overflow-hidden">
+            <svg viewBox="0 0 100 100" class="w-16 h-16 drop-shadow-lg" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="50" cy="50" r="36" fill="url(#emptyBotGrad)" />
+              <ellipse cx="40" cy="30" rx="18" ry="8" fill="white" fill-opacity="0.25" />
+              <rect x="28" y="36" width="44" height="24" rx="12" fill="#0b0f17" />
+              <!-- Inquisitive / Searching Eyes -->
+              <circle cx="40" cy="48" r="4.5" fill="#38bdf8" />
+              <circle cx="60" cy="48" r="4.5" fill="#38bdf8" />
+              <circle cx="41" cy="46" r="1.5" fill="#ffffff" />
+              <circle cx="61" cy="46" r="1.5" fill="#ffffff" />
+              <!-- Cute smile -->
+              <path d="M46 54 Q50 57 54 54" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" fill="none" />
+              <!-- Magnifying glass / search wand -->
+              <circle cx="72" cy="32" r="10" stroke="#fbbf24" stroke-width="3" fill="none" />
+              <line x1="79" y1="39" x2="88" y2="48" stroke="#f59e0b" stroke-width="3.5" stroke-linecap="round" />
+              <defs>
+                <linearGradient id="emptyBotGrad" x1="15" y1="15" x2="85" y2="85" gradientUnits="userSpaceOnUse">
+                  <stop stop-color="#3b82f6" />
+                  <stop offset="0.5" stop-color="#2563eb" />
+                  <stop offset="1" stop-color="#1d4ed8" />
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
         </div>
-        <p class="text-sm font-semibold text-slate-600 dark:text-slate-300">No spendings found</p>
-        <p class="text-xs text-slate-400 mt-0.5">Click "+ Add Expense" to record your first transaction.</p>
+        <p class="text-sm font-bold text-slate-700 dark:text-slate-200">No Spendings Found Here</p>
+        <p class="text-xs text-slate-400 mt-1 max-w-xs mx-auto">Click "+ Add Expense" or Import a statement to see your analytics come alive!</p>
       </div>
     </div>
   </main>

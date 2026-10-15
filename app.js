@@ -833,6 +833,20 @@
             }
           }
         }
+
+        // --- 3D Character Dynamic Speech Reactivity ---
+        const finbotStatusMsgEl = document.getElementById('finbotStatusMessage');
+        if (finbotStatusMsgEl) {
+          if (remainingBudget <= 0) {
+            finbotStatusMsgEl.innerHTML = `⚠️ <strong class="text-rose-400">Budget Over Limit!</strong> Intha maasam selavu konjam adhigama irukku, kavanama irunga!`;
+          } else if (todayRemaining < 0) {
+            finbotStatusMsgEl.innerHTML = `⚡ Inaiku daily target limit thaandiduchu (₹${Math.round(Math.abs(todayRemaining))} over). Naalaiku balance pannidalaam!`;
+          } else if (todaySpent === 0) {
+            finbotStatusMsgEl.innerHTML = `Vanakkam! <span class="wave-hand">👋</span> Inaiku innum spending start aagala. ₹${Math.round(dailyTargetLimit)} safe budget irukku!`;
+          } else {
+            finbotStatusMsgEl.innerHTML = `Super! Inaiku ₹${Math.round(todaySpent)} spend pannirukkeenga, innum <strong class="text-emerald-400 mono">₹${Math.round(todayRemaining)}</strong> daily limit safe-ah irukku! ✨`;
+          }
+        }
       }
     }
   }
