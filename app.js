@@ -763,9 +763,9 @@
         const combinedPct = topCatPct + runnerUpPct;
 
         if (topCat2Dot) topCat2Dot.style.backgroundColor = color2;
-        if (kpiRunnerUpCategory) kpiRunnerUpCategory.textContent = `${CATEGORY_ICONS[runnerUpCat] || '🏷️'} ${runnerUpCat}`;
-        if (kpiRunnerUpAmount) kpiRunnerUpAmount.textContent = `${formatINR(runnerUpAmt)} (${runnerUpPct.toFixed(1)}%)`;
-        if (kpiTop2SharePct) kpiTop2SharePct.textContent = `${combinedPct.toFixed(0)}% of total spend`;
+        if (kpiRunnerUpCategory) kpiRunnerUpCategory.textContent = `${runnerUpCat}`;
+        if (kpiRunnerUpAmount) kpiRunnerUpAmount.textContent = `${formatINR(runnerUpAmt)} (${runnerUpPct.toFixed(0)}%)`;
+        if (kpiTop2SharePct) kpiTop2SharePct.textContent = `${combinedPct.toFixed(0)}%`;
 
         if (topCat2Bar) {
           topCat2Bar.style.width = `${Math.min(100 - topCatPct, runnerUpPct)}%`;
@@ -774,7 +774,7 @@
       } else {
         if (kpiRunnerUpCategory) kpiRunnerUpCategory.textContent = 'None';
         if (kpiRunnerUpAmount) kpiRunnerUpAmount.textContent = '₹0 (0%)';
-        if (kpiTop2SharePct) kpiTop2SharePct.textContent = `${topCatPct.toFixed(0)}% of total spend`;
+        if (kpiTop2SharePct) kpiTop2SharePct.textContent = `${topCatPct.toFixed(0)}%`;
         if (topCat2Bar) topCat2Bar.style.width = '0%';
       }
     } else {
