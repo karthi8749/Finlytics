@@ -1279,6 +1279,35 @@
       '#64748b'  // Slate 500
     ];
 
+    // Handle clicking on a slice in the pie chart or merchant row
+    function handleSmallLeakSliceClick(selectedLabel) {
+      if (!selectedLabel) return;
+
+      let targetItems = [];
+      if (selectedLabel.startsWith('Other Micro')) {
+        const topNames = new Set(topPayees.map(p => p.name.toLowerCase()));
+        targetItems = microItems.filter(item => {
+          let name = (item.title || 'Micro Expense').trim().replace(/^upi[-:\s]+/i, '').trim() || 'Micro Expense';
+          return !topNames.has(name.toLowerCase());
+        });
+      } else {
+        targetItems = microItems.filter(item => {
+          let name = (item.title || 'Micro Expense').trim().replace(/^upi[-:\s]+/i, '').trim() || 'Micro Expense';
+          return name.toLowerCase() === selectedLabel.toLowerCase();
+        });
+      }
+
+      if (targetItems.length === 0) {
+        targetItems = microItems.filter(item => (item.title || '').toLowerCase().includes(selectedLabel.toLowerCase()));
+      }
+
+      const totalSum = targetItems.reduce((s, e) => s + e.amount, 0);
+      openMicroPurchasesModal(targetItems, totalSum, selectedLabel);
+    }
+
+    // Expose for inline onclick in merchant rows
+    window.viewSmallLeakMerchant = handleSmallLeakSliceClick;
+
     if (smallLeakChart) smallLeakChart.destroy();
 
     const ctx = canvasEl.getContext('2d');
@@ -1291,13 +1320,25 @@
           backgroundColor: sliceColors.slice(0, labels.length),
           borderWidth: 2,
           borderColor: isDark ? '#0f172a' : '#ffffff',
-          hoverOffset: 4
+          hoverOffset: 6
         }]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
         cutout: '62%',
+        onClick: (evt, activeElements) => {
+          if (activeElements && activeElements.length > 0) {
+            const elementIndex = activeElements[0].index;
+            const clickedLabel = labels[elementIndex];
+            handleSmallLeakSliceClick(clickedLabel);
+          }
+        },
+        onHover: (event, chartElement) => {
+          if (event.native && event.native.target) {
+            event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
+          }
+        },
         plugins: {
           legend: {
             display: false
@@ -1307,7 +1348,7 @@
               label: (ctx) => {
                 const val = ctx.raw || 0;
                 const pct = microTotal > 0 ? ((val / microTotal) * 100).toFixed(1) : 0;
-                return ` ${ctx.label}: ${formatINR(val)} (${pct}%)`;
+                return ` ${ctx.label}: ${formatINR(val)} (${pct}%) — Click to view list`;
               }
             }
           }
@@ -1322,16 +1363,17 @@
         const avg = payee.count > 0 ? Math.round(payee.amount / payee.count) : 0;
         const color = sliceColors[idx % sliceColors.length];
         const safeName = payee.name.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const jsName = payee.name.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 
         return `
-          <div class="flex items-center justify-between p-2 rounded-xl bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800/80 transition-colors text-xs">
+          <div onclick="window.viewSmallLeakMerchant('${jsName}')" class="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-900/60 hover:bg-slate-100 dark:hover:bg-slate-800/80 border border-slate-200/80 dark:border-slate-800/80 transition cursor-pointer active:scale-[0.99] group text-xs">
             <div class="flex items-center gap-2 min-w-0 pr-2">
               <span class="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 text-slate-950 shadow-xs" style="background-color: ${color}">
                 ${idx + 1}
               </span>
               <div class="truncate">
-                <div class="font-semibold text-slate-200 truncate">${safeName}</div>
-                <div class="text-[10px] text-slate-400 flex items-center gap-1.5">
+                <div class="font-semibold text-slate-800 dark:text-slate-200 truncate group-hover:text-amber-500 transition-colors">${safeName}</div>
+                <div class="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
                   <span>${payee.count} purchases</span>
                   <span>•</span>
                   <span>Avg: ₹${avg}</span>
@@ -1339,7 +1381,7 @@
               </div>
             </div>
             <div class="text-right shrink-0">
-              <div class="font-bold text-amber-400 mono">${formatINR(payee.amount)}</div>
+              <div class="font-bold text-amber-600 dark:text-amber-400 mono">${formatINR(payee.amount)}</div>
               <div class="text-[10px] text-slate-400 font-medium">${pct}% leak</div>
             </div>
           </div>
@@ -1351,18 +1393,18 @@
         const otherCount = otherPayees.reduce((s, p) => s + p.count, 0);
         const otherPct = microTotal > 0 ? ((otherTotal / microTotal) * 100).toFixed(0) : 0;
         listEl.innerHTML += `
-          <div class="flex items-center justify-between p-2 rounded-xl bg-slate-900/40 border border-slate-800/50 text-xs">
+          <div onclick="window.viewSmallLeakMerchant('Other Micro')" class="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-900/40 hover:bg-slate-100 dark:hover:bg-slate-800/60 border border-slate-200/60 dark:border-slate-800/50 transition cursor-pointer active:scale-[0.99] group text-xs">
             <div class="flex items-center gap-2 min-w-0 pr-2">
-              <span class="w-5 h-5 rounded-full bg-slate-700 text-slate-300 flex items-center justify-center text-[10px] font-bold shrink-0">
+              <span class="w-5 h-5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 flex items-center justify-center text-[10px] font-bold shrink-0">
                 +
               </span>
               <div class="truncate">
-                <div class="font-semibold text-slate-300 truncate">${otherPayees.length} other merchants</div>
+                <div class="font-semibold text-slate-700 dark:text-slate-300 truncate group-hover:text-amber-500 transition-colors">${otherPayees.length} other merchants</div>
                 <div class="text-[10px] text-slate-400">${otherCount} micro-spends</div>
               </div>
             </div>
             <div class="text-right shrink-0">
-              <div class="font-bold text-slate-300 mono">${formatINR(otherTotal)}</div>
+              <div class="font-bold text-slate-600 dark:text-slate-300 mono">${formatINR(otherTotal)}</div>
               <div class="text-[10px] text-slate-400">${otherPct}% leak</div>
             </div>
           </div>
@@ -1376,8 +1418,8 @@
       const topPct = microTotal > 0 ? ((topPayee.amount / microTotal) * 100).toFixed(0) : 0;
       const safeTopName = topPayee.name.replace(/</g, '&lt;').replace(/>/g, '&gt;');
       noteEl.innerHTML = `
-        <strong>${microItems.length} micro-spends (≤ ₹200)</strong> serndhu motham <strong class="text-amber-300 mono">${formatINR(microTotal)}</strong> karanjirukku!
-        Adhigama <span class="text-amber-300 font-semibold underline decoration-amber-500/50">${safeTopName}</span> ku mattum <strong class="text-amber-300 mono">${formatINR(topPayee.amount)}</strong> (${topPct}%) poyirukku. Daily control pannina maasathuku ~${formatINR(microTotal * 0.4)} save aagum! 🐜
+        <strong>${microItems.length} micro-spends (≤ ₹200)</strong> serndhu motham <strong class="text-amber-600 dark:text-amber-300 mono">${formatINR(microTotal)}</strong> outgo aagirukku.
+        Adhigama <span class="text-amber-600 dark:text-amber-300 font-semibold underline decoration-amber-500/50">${safeTopName}</span> ku mattum <strong class="text-amber-600 dark:text-amber-300 mono">${formatINR(topPayee.amount)}</strong> (${topPct}%) spend aagirukku. Slice-ah click panni exact transactions paarkalam!
       `;
     }
   }
@@ -1618,12 +1660,17 @@
   const microModalSubtitle = document.getElementById('microModalSubtitle');
   const microModalTotal = document.getElementById('microModalTotal');
 
-  function openMicroPurchasesModal(items, totalSum) {
+  function openMicroPurchasesModal(items, totalSum, titlePrefix) {
     if (!microPurchasesModal) return;
     
-    microModalTitle.textContent = `${items.length} Micro-Purchases Breakdown`;
-    microModalSubtitle.textContent = `All quick expenses ≤ ₹200 from this period`;
-    microModalTotal.innerHTML = `Total: <strong class="text-amber-400 font-mono text-sm">${formatINR(totalSum)}</strong>`;
+    if (titlePrefix) {
+      microModalTitle.textContent = `${titlePrefix} (≤ ₹200)`;
+      microModalSubtitle.textContent = `${items.length} micro expenses. Click any item to jump to details.`;
+    } else {
+      microModalTitle.textContent = `${items.length} Micro-Purchases Breakdown`;
+      microModalSubtitle.textContent = `All quick expenses ≤ ₹200 from this period`;
+    }
+    microModalTotal.innerHTML = `Total: <strong class="text-amber-500 dark:text-amber-400 font-mono text-sm">${formatINR(totalSum)}</strong>`;
 
     microModalList.innerHTML = items.map(item => {
       const catColor = CATEGORY_COLORS[item.category] || '#10b981';
@@ -1637,28 +1684,47 @@
               ${catIcon}
             </span>
             <div class="min-w-0 flex-1">
-              <h5 class="font-bold text-slate-900 dark:text-white break-words group-hover:text-emerald-400 transition flex items-center gap-1.5">
+              <h5 class="font-bold text-slate-900 dark:text-white break-words group-hover:text-emerald-500 dark:group-hover:text-emerald-400 transition flex items-center gap-1.5">
                 <span>${item.title}</span>
-                <span class="text-[9px] text-amber-400 font-semibold px-1.5 py-0.2 rounded bg-amber-500/10 shrink-0">Tap to View &rarr;</span>
+                <span class="text-[9px] text-amber-500 dark:text-amber-400 font-semibold px-1.5 py-0.2 rounded bg-amber-500/10 shrink-0">Tap to View &rarr;</span>
               </h5>
               <div class="text-[10px] text-slate-400 flex items-center gap-1.5 mt-0.5 flex-wrap">
                 <span>${formatDate(item.date)}</span>
                 <span>•</span>
-                <span class="text-slate-300">${item.paymentMode}</span>
+                <span class="text-slate-500 dark:text-slate-300">${item.paymentMode}</span>
                 <span>•</span>
-                <span class="text-emerald-400 font-medium">${item.category}</span>
+                <span class="text-emerald-500 dark:text-emerald-400 font-medium">${item.category}</span>
               </div>
-              <div class="text-[11px] text-slate-300/90 font-mono break-words leading-relaxed mt-1.5 p-1.5 rounded bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 select-text">
+              <div class="text-[11px] text-slate-600 dark:text-slate-300 font-mono break-words leading-relaxed mt-1.5 p-1.5 rounded bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 select-text">
                 ${fullNarration}
               </div>
             </div>
           </div>
           <div class="text-right shrink-0">
-            <span class="mono font-bold text-amber-400 text-sm">${formatINR(item.amount)}</span>
+            <span class="mono font-bold text-amber-600 dark:text-amber-400 text-sm">${formatINR(item.amount)}</span>
           </div>
         </div>
       `;
     }).join('');
+
+    // Wire up filterInTableMicroBtn
+    const filterBtn = document.getElementById('filterInTableMicroBtn');
+    if (filterBtn) {
+      filterBtn.onclick = function () {
+        closeMicroModal();
+        const searchInput = document.getElementById('searchExpenseInput');
+        if (searchInput) {
+          const filterTerm = (titlePrefix && !titlePrefix.startsWith('Other Micro')) ? titlePrefix : '';
+          searchInput.value = filterTerm;
+          searchQuery = filterTerm;
+          refreshView();
+          const tableSection = document.getElementById('expenseListContainer') || document.getElementById('expenseTableBody');
+          if (tableSection) {
+            tableSection.scrollIntoView({ behavior: 'smooth' });
+          }
+        }
+      };
+    }
 
     microPurchasesModal.classList.remove('hidden');
     if (window.lucide) lucide.createIcons();
