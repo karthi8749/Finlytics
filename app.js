@@ -3548,26 +3548,29 @@
     }
   }
 
-  // Smart Bank SMS Parser (Strictly SBI Bank Filter)
+  // Smart Transaction & Notification Parser (SBI Bank SMS + GPay / PhonePe / Paytm / Cred Notifications)
   function parseBankSmsText(smsText, sender) {
     if (!smsText || typeof smsText !== 'string') return null;
     const clean = smsText.replace(/[\r\n]+/g, ' ').trim();
     const cleanLower = clean.toLowerCase();
     const senderLower = (sender || '').toLowerCase();
 
-    // STRICT SBI FILTER: User specifically requested only SBI SMS to be captured among 3 banks
-    // Check if sender or message text belongs to SBI
+    // Check if source is a UPI payment notification (Google Pay, PhonePe, Paytm, Cred, BHIM, Amazon Pay)
+    const isUpiApp = /google|gpay|phonepe|paytm|cred|bhim|amazonpay|upi|yono/i.test(senderLower) ||
+                    /paid to|sent to|payment of|upi payment|money sent to|paid successfully/i.test(cleanLower);
+
+    // Check if SMS belongs to SBI Bank
     const isSbiSender = /sbi|sbin|sbiinb|sbipsg|sbicrd/i.test(senderLower);
     const hasSbiKeyword = /\bsbi\b|state bank of india|sbiinb|\batinb\b|sbicard/i.test(cleanLower);
     
-    // If sender is specified and not SBI, or if neither sender nor content indicates SBI, ignore!
-    if (!isSbiSender && !hasSbiKeyword) {
-      console.log('Skipping SMS: Not from SBI Bank (Filtered out for multi-bank protection).');
+    // Allow either SBI SMS OR any UPI payment notification (GPay/PhonePe/Paytm/Cred)!
+    if (!isUpiApp && !isSbiSender && !hasSbiKeyword) {
+      console.log('Skipping message: Not SBI SMS nor UPI payment app notification.');
       return null;
     }
 
     // 1. Amount matching (Rs., INR, Rs, ₹)
-    const amountMatch = clean.match(/(?:(?:Rs\.?|INR|₹)\s*([\d,]+(?:\.\d{1,2})?)|(?:debited|spent|paid)\s*(?:by|for|of)?\s*(?:Rs\.?|INR|₹)?\s*([\d,]+(?:\.\d{1,2})?))/i);
+    const amountMatch = clean.match(/(?:(?:Rs\.?|INR|₹)\s*([\d,]+(?:\.\d{1,2})?)|(?:debited|spent|paid|payment of|sent)\s*(?:by|for|of)?\s*(?:Rs\.?|INR|₹)?\s*([\d,]+(?:\.\d{1,2})?))/i);
     let amount = 0;
     if (amountMatch) {
       const rawAmt = amountMatch[1] || amountMatch[2];
@@ -3577,32 +3580,33 @@
     }
 
     if (!amount || isNaN(amount) || amount <= 0) {
-      return null; // Not an expense or debit SMS
+      return null; // Not an expense or debit message
     }
 
-    // 2. Debit check (must be debit / spend / transfer / withdrawn)
-    const isDebit = /debit|debited|spent|paid|withdrawn|purchase|transferred|sent/i.test(clean);
+    // 2. Debit check (must be debit / spend / transfer / payment)
+    const isDebit = /debit|debited|spent|paid|withdrawn|purchase|transferred|sent|payment of|successful/i.test(clean);
     const isCredit = /credited|received|refund/i.test(clean);
     if (!isDebit && isCredit) {
       return null; // Ignore credits/deposits
     }
 
     // 3. Merchant / Recipient extraction
-    let merchant = 'Bank Transaction';
-    const merchantMatch = clean.match(/(?:to|at|vpa|info|transfer to|paid to)\s+([A-Za-z0-9\.\s@_-]{2,30}?)(?=\s+(?:on|ref|upi|avl|bal|avail|via|\.|\,|$))/i);
+    let merchant = 'UPI Payment';
+    // Match common notification & SMS formats: "Paid ₹150 to Swiggy", "Payment of ₹450 to Chai Point", "debited by... transfer to XYZ"
+    const merchantMatch = clean.match(/(?:paid to|transfer to|payment to|sent to|transfered to|to|at|vpa|info)\s+([A-Za-z0-9\.\s@_-]{2,30}?)(?=\s+(?:on|ref|upi|avl|bal|avail|via|using|from|\.|\,|$))/i);
     if (merchantMatch && merchantMatch[1]) {
       merchant = merchantMatch[1].trim();
     } else {
-      // Fallback: check if UPI transfer
+      // Fallback: check if UPI transfer or app notification
       const upiMatch = clean.match(/UPI\/[A-Za-z0-9]+\/([A-Za-z0-9\s]+)/i);
       if (upiMatch && upiMatch[1]) {
         merchant = upiMatch[1].trim();
       }
     }
     // Clean up merchant name
-    merchant = merchant.replace(/^(vpa|info|transfer|ref)\s+/i, '').trim();
+    merchant = merchant.replace(/^(vpa|info|transfer|ref|using|from)\s+/i, '').trim();
     if (merchant.length > 25) merchant = merchant.substring(0, 25);
-    if (!merchant) merchant = 'SBI Bank Expense';
+    if (!merchant) merchant = isUpiApp ? 'UPI Transaction' : 'SBI Bank Expense';
 
     // 4. Category Prediction
     const lowerSms = clean.toLowerCase();

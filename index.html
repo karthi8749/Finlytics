@@ -961,13 +961,16 @@
             </div>
           </div>
 
-          <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 space-y-1">
+          <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 space-y-1.5">
             <div class="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
               <span class="w-4 h-4 rounded-full bg-emerald-500 text-slate-950 font-bold text-[10px] flex items-center justify-center">3</span>
-              <span>MacroDroid on Android Phone</span>
+              <span>MacroDroid Setup on Phone (Bank SMS or GPay/PhonePe Notification)</span>
             </div>
             <p class="text-[11px] text-slate-400">
-              In MacroDroid: Trigger = <code>SMS Received (*debited*)</code>. Action = <code>HTTP Request POST</code> with the URL below.
+              In MacroDroid: Trigger = <code>Notification Received</code> (Select <strong>Google Pay / PhonePe / Paytm</strong>, Text = <code>*Paid*</code> or <code>*sent*</code>) OR <code>SMS Received</code>.
+            </p>
+            <p class="text-[11px] text-slate-400">
+              Action = <code>HTTP Request POST</code> with the Webhook URL below:
             </p>
             <div class="bg-black/40 p-2 rounded border border-slate-700/80 font-mono text-[10px] text-emerald-400 break-all select-all" id="macroDroidUrlDisplay">
               Configure URL & Token above to generate phone webhook URL
