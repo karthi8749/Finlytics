@@ -834,17 +834,142 @@
           }
         }
 
-        // --- 3D Character Dynamic Speech Reactivity ---
-        const finbotStatusMsgEl = document.getElementById('finbotStatusMessage');
-        if (finbotStatusMsgEl) {
+        // --- Dynamic Cartoon Mascot Reactivity (Ant, Vampire, Piggy) ---
+        const cartoonBanner = document.getElementById('cartoonMascotBanner');
+        const cartoonSvg = document.getElementById('cartoonMascotSvg');
+        const cartoonName = document.getElementById('cartoonMascotName');
+        const cartoonTag = document.getElementById('cartoonMascotTag');
+        const cartoonSpeech = document.getElementById('cartoonMascotSpeech');
+        const cartoonBadgeIcon = document.getElementById('cartoonMascotBadgeIcon');
+        const cartoonGlow = document.getElementById('cartoonMascotGlow');
+        const cartoonContainer = document.getElementById('cartoonMascotContainer');
+
+        // Check if user has small micro-purchase leak (<= ₹200 spends)
+        const microCount = filteredList.filter(e => e.amount <= 200 && e.amount > 0).length;
+        const microTotal = filteredList.filter(e => e.amount <= 200 && e.amount > 0).reduce((sum, e) => sum + e.amount, 0);
+
+        if (cartoonBanner && cartoonSvg) {
           if (remainingBudget <= 0) {
-            finbotStatusMsgEl.innerHTML = `⚠️ <strong class="text-rose-400">Budget Over Limit!</strong> Intha maasam selavu konjam adhigama irukku, kavanama irunga!`;
-          } else if (todayRemaining < 0) {
-            finbotStatusMsgEl.innerHTML = `⚡ Inaiku daily target limit thaandiduchu (₹${Math.round(Math.abs(todayRemaining))} over). Naalaiku balance pannidalaam!`;
-          } else if (todaySpent === 0) {
-            finbotStatusMsgEl.innerHTML = `Vanakkam! <span class="wave-hand">👋</span> Inaiku innum spending start aagala. ₹${Math.round(dailyTargetLimit)} safe budget irukku!`;
+            // 🧛 State 1: Count Drain-ula (Budget Vampire - Sucking budget dry)
+            cartoonBanner.className = 'relative overflow-hidden rounded-2xl bg-gradient-to-r from-rose-950/40 via-slate-900/80 to-purple-950/40 border border-rose-500/30 p-3.5 sm:p-4 shadow-md backdrop-blur-md transition-all duration-300';
+            if (cartoonGlow) cartoonGlow.className = 'absolute inset-0 rounded-2xl bg-gradient-to-tr from-rose-500 to-purple-600 blur-md opacity-40 char-3d-glow';
+            if (cartoonContainer) cartoonContainer.className = 'relative w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-tr from-slate-900 to-slate-800 border border-rose-500/50 flex items-center justify-center shadow-lg char-3d-floating overflow-hidden';
+            if (cartoonBadgeIcon) {
+              cartoonBadgeIcon.textContent = '🧛';
+              cartoonBadgeIcon.className = 'absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-rose-600 border-2 border-[#0b0f17] flex items-center justify-center text-[10px]';
+            }
+            if (cartoonName) cartoonName.textContent = 'Count Drain-ula';
+            if (cartoonTag) {
+              cartoonTag.textContent = 'Budget Vampire 🔥';
+              cartoonTag.className = 'text-[9px] px-2 py-0.5 rounded-full font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30';
+            }
+            if (cartoonSpeech) {
+              cartoonSpeech.innerHTML = `Ayyo! <strong class="text-rose-400">Budget full-ah drain aaiduchu!</strong> (${formatINR(Math.abs(remainingBudget))} over). Ini emergency purchases mattum pannunga!`;
+            }
+
+            // Vampire SVG with fangs and red eyes
+            cartoonSvg.innerHTML = `
+              <circle cx="50" cy="50" r="38" fill="#581c87" />
+              <path d="M20 28 L34 50 L16 64 Z" fill="#b91c1c" />
+              <path d="M80 28 L66 50 L84 64 Z" fill="#b91c1c" />
+              <ellipse cx="50" cy="52" rx="26" ry="24" fill="#fce7f3" />
+              <path d="M24 45 Q36 28 50 40 Q64 28 76 45 Q66 22 50 22 Q34 22 24 45 Z" fill="#1e1b4b" />
+              <ellipse cx="40" cy="50" rx="5" ry="6" fill="#ef4444" />
+              <ellipse cx="60" cy="50" rx="5" ry="6" fill="#ef4444" />
+              <circle cx="39" cy="48" r="2" fill="#ffffff" />
+              <circle cx="59" cy="48" r="2" fill="#ffffff" />
+              <path d="M42 58 Q50 64 58 58" stroke="#1e1b4b" stroke-width="2" fill="none" />
+              <polygon points="44,59 47,59 45.5,65" fill="#ffffff" stroke="#1e1b4b" stroke-width="0.8" />
+              <polygon points="53,59 56,59 54.5,65" fill="#ffffff" stroke="#1e1b4b" stroke-width="0.8" />
+            `;
+
+          } else if (microCount >= 5 && microTotal >= 500) {
+            // 🐜 State 2: Anty the Sugar Ant (Small Purchase Leak - Tea, snacks, micro UPI)
+            cartoonBanner.className = 'relative overflow-hidden rounded-2xl bg-gradient-to-r from-amber-950/40 via-slate-900/80 to-purple-950/30 border border-amber-500/30 p-3.5 sm:p-4 shadow-md backdrop-blur-md transition-all duration-300';
+            if (cartoonGlow) cartoonGlow.className = 'absolute inset-0 rounded-2xl bg-gradient-to-tr from-amber-500 to-yellow-500 blur-md opacity-40 char-3d-glow';
+            if (cartoonContainer) cartoonContainer.className = 'relative w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-tr from-slate-900 to-slate-800 border border-amber-500/50 flex items-center justify-center shadow-lg char-3d-floating overflow-hidden';
+            if (cartoonBadgeIcon) {
+              cartoonBadgeIcon.textContent = '🐜';
+              cartoonBadgeIcon.className = 'absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-amber-600 border-2 border-[#0b0f17] flex items-center justify-center text-[10px]';
+            }
+            if (cartoonName) cartoonName.textContent = 'Anty the Sugar Ant';
+            if (cartoonTag) {
+              cartoonTag.textContent = 'Small Leak Alert 🐜';
+              cartoonTag.className = 'text-[9px] px-2 py-0.5 rounded-full font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30';
+            }
+            if (cartoonSpeech) {
+              cartoonSpeech.innerHTML = `Siru thuli peruvellam! <strong class="text-amber-300">${microCount} micro-spends</strong> (tea, snacks under ₹200) serndhu <strong class="text-amber-400 mono">${formatINR(microTotal)}</strong> karanjirukku!`;
+            }
+
+            // Cute Cartoon Sugar Ant SVG carrying a rupee coin
+            cartoonSvg.innerHTML = `
+              <!-- Ant Head -->
+              <circle cx="50" cy="46" r="22" fill="#78350f" />
+              <ellipse cx="44" cy="38" rx="10" ry="5" fill="#fde68a" fill-opacity="0.3" />
+              <!-- Ant Antennae with cute tips -->
+              <path d="M42 26 Q35 12 25 14" stroke="#78350f" stroke-width="2.5" stroke-linecap="round" fill="none" />
+              <circle cx="25" cy="14" r="3.5" fill="#f59e0b" />
+              <path d="M58 26 Q65 12 75 14" stroke="#78350f" stroke-width="2.5" stroke-linecap="round" fill="none" />
+              <circle cx="75" cy="14" r="3.5" fill="#f59e0b" />
+              <!-- Big Cartoon Eyes -->
+              <ellipse cx="42" cy="44" rx="6" ry="7" fill="#ffffff" />
+              <ellipse cx="58" cy="44" rx="6" ry="7" fill="#ffffff" />
+              <circle cx="43" cy="44" r="3.5" fill="#1e1b4b" />
+              <circle cx="57" cy="44" r="3.5" fill="#1e1b4b" />
+              <circle cx="41" cy="42" r="1.5" fill="#ffffff" />
+              <circle cx="55" cy="42" r="1.5" fill="#ffffff" />
+              <!-- Ant cute mouth with tongue -->
+              <path d="M46 54 Q50 58 54 54" stroke="#1e1b4b" stroke-width="2" fill="none" />
+              <!-- Carried Gold Rupee Coin -->
+              <circle cx="50" cy="74" r="15" fill="#f59e0b" stroke="#d97706" stroke-width="2" />
+              <text x="50" y="80" font-size="14" font-weight="bold" fill="#78350f" text-anchor="middle" font-family="sans-serif">₹</text>
+            `;
+
           } else {
-            finbotStatusMsgEl.innerHTML = `Super! Inaiku ₹${Math.round(todaySpent)} spend pannirukkeenga, innum <strong class="text-emerald-400 mono">₹${Math.round(todayRemaining)}</strong> daily limit safe-ah irukku! ✨`;
+            // 🐷 State 3: Sirappu Piggy (Wise Saver / Healthy Budget)
+            cartoonBanner.className = 'relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-950/40 via-slate-900/80 to-teal-950/30 border border-emerald-500/30 p-3.5 sm:p-4 shadow-md backdrop-blur-md transition-all duration-300';
+            if (cartoonGlow) cartoonGlow.className = 'absolute inset-0 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 blur-md opacity-40 char-3d-glow';
+            if (cartoonContainer) cartoonContainer.className = 'relative w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-tr from-slate-900 to-slate-800 border border-emerald-500/50 flex items-center justify-center shadow-lg char-3d-floating overflow-hidden';
+            if (cartoonBadgeIcon) {
+              cartoonBadgeIcon.textContent = '🐷';
+              cartoonBadgeIcon.className = 'absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-600 border-2 border-[#0b0f17] flex items-center justify-center text-[10px]';
+            }
+            if (cartoonName) cartoonName.textContent = 'Piggy the Vault';
+            if (cartoonTag) {
+              cartoonTag.textContent = 'Safe Savings Shield 🛡️';
+              cartoonTag.className = 'text-[9px] px-2 py-0.5 rounded-full font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+            }
+            if (cartoonSpeech) {
+              if (todaySpent === 0) {
+                cartoonSpeech.innerHTML = `Kasu pathiram! <span class="wave-hand">👋</span> Inaiku innum spending start aagala. ₹${Math.round(dailyTargetLimit)} safe allowance irukku!`;
+              } else {
+                cartoonSpeech.innerHTML = `Nalla control! Inaiku ₹${Math.round(todaySpent)} aagirukku, innum <strong class="text-emerald-400 mono">₹${Math.round(todayRemaining)}</strong> daily limit safe-ah irukku! 🌟`;
+              }
+            }
+
+            // Cute Cartoon Pink Piggy Bank SVG
+            cartoonSvg.innerHTML = `
+              <!-- Piggy Body -->
+              <ellipse cx="50" cy="52" rx="34" ry="28" fill="#f472b6" />
+              <!-- Ears -->
+              <polygon points="26,30 36,18 42,32" fill="#ec4899" />
+              <polygon points="74,30 64,18 58,32" fill="#ec4899" />
+              <!-- Highlight -->
+              <ellipse cx="40" cy="36" rx="14" ry="6" fill="#ffffff" fill-opacity="0.3" />
+              <!-- Big Cartoon Eyes with lash -->
+              <ellipse cx="36" cy="46" rx="5" ry="6" fill="#1e1b4b" />
+              <ellipse cx="64" cy="46" rx="5" ry="6" fill="#1e1b4b" />
+              <circle cx="34" cy="44" r="2" fill="#ffffff" />
+              <circle cx="62" cy="44" r="2" fill="#ffffff" />
+              <!-- Cute Snout with nostrils -->
+              <ellipse cx="50" cy="56" rx="13" ry="9" fill="#fbcfe8" stroke="#ec4899" stroke-width="1.5" />
+              <circle cx="46" cy="56" r="2" fill="#ec4899" />
+              <circle cx="54" cy="56" r="2" fill="#ec4899" />
+              <!-- Coin Slot on head with glowing coin -->
+              <rect x="44" y="24" width="12" height="3" rx="1.5" fill="#9d174d" />
+              <circle cx="50" cy="19" r="6" fill="#fbbf24" stroke="#f59e0b" stroke-width="1.5" />
+              <text x="50" y="23" font-size="8" font-weight="bold" fill="#78350f" text-anchor="middle">₹</text>
+            `;
           }
         }
       }
@@ -1246,14 +1371,14 @@
     // 2. Micro-Transactions / Small Leaks (transactions <= ₹200)
     const microItems = filteredList.filter(e => e.amount <= 200 && e.amount > 0);
     const microSum = microItems.reduce((s, e) => s + e.amount, 0);
-    if (microItems.length >= 8 && microSum > 800) {
+    if (microItems.length >= 6 && microSum > 500) {
       insights.push({
         type: 'micro',
         icon: 'coffee',
         color: 'amber',
-        badge: 'Small Purchases Leak',
-        title: `${microItems.length} Micro-Spends Found`,
-        desc: `Quick spends under ₹200 totaled ${formatINR(microSum)}. These silent transactions add up fast without notice.`
+        badge: '🐜 Small Purchases Leak (Sugar Ant Alert)',
+        title: `${microItems.length} Micro-Spends (Total: ${formatINR(microSum)})`,
+        desc: `Chinna chinna tea, snacks, micro UPI spends (${microItems.length} times) serndhu ${formatINR(microSum)} karanjirukku! Idhu oru silent wallet drain.`
       });
     }
 

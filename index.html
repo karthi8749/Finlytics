@@ -279,64 +279,63 @@
   <!-- Main Container (Full Width - Zero Wasted Space) -->
   <main class="w-full max-w-full px-3 sm:px-6 lg:px-8 py-3 sm:py-5 space-y-4 sm:space-y-6 overflow-x-hidden pb-24 sm:pb-6">
 
-    <!-- 3D Animated Financial Assistant Hero Companion -->
-    <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-blue-500/10 dark:from-emerald-950/40 dark:via-slate-900/60 dark:to-teal-950/30 border border-emerald-500/20 dark:border-emerald-500/30 p-3.5 sm:p-4 shadow-sm backdrop-blur-md">
+    <!-- Cartoon Financial Mascot Banner (Vampire, Ant & Piggy Cartoon Alert) -->
+    <div id="cartoonMascotBanner" class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-purple-950/40 via-slate-900/80 to-amber-950/30 border border-purple-500/30 p-3.5 sm:p-4 shadow-md backdrop-blur-md transition-all duration-300">
       <div class="flex items-center justify-between gap-3">
-        <!-- 3D Animated Character Avatar -->
+        <!-- Cartoon Character Avatar -->
         <div class="flex items-center gap-3 min-w-0">
-          <div class="relative shrink-0 w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center">
+          <div class="relative shrink-0 w-13 h-13 sm:w-15 sm:h-15 flex items-center justify-center">
             <!-- Ambient Glow -->
-            <div class="absolute inset-0 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 blur-md opacity-40 char-3d-glow"></div>
-            <!-- 3D Character Illustration / Floating SVG -->
-            <div class="relative w-full h-full rounded-2xl bg-gradient-to-tr from-slate-900 to-slate-800 border border-emerald-500/40 flex items-center justify-center shadow-lg char-3d-floating overflow-hidden">
-              <svg viewBox="0 0 100 100" class="w-10 h-10 sm:w-11 sm:h-11 drop-shadow-md" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <!-- 3D Cute Robot / Finance Bot Buddy -->
-                <circle cx="50" cy="50" r="38" fill="url(#botGrad)" />
-                <!-- 3D Shading highlight -->
-                <ellipse cx="40" cy="30" rx="20" ry="10" fill="white" fill-opacity="0.25" />
-                <!-- Face Visor -->
-                <rect x="26" y="34" width="48" height="26" rx="13" fill="#0b0f17" />
-                <!-- Glowing Friendly Eyes -->
-                <ellipse cx="38" cy="47" rx="5" ry="6" fill="#10b981" />
-                <ellipse cx="62" cy="47" rx="5" ry="6" fill="#10b981" />
-                <circle cx="36" cy="45" r="2" fill="#ffffff" />
-                <circle cx="60" cy="45" r="2" fill="#ffffff" />
-                <!-- Smile -->
-                <path d="M44 53 Q50 58 56 53" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" fill="none" />
-                <!-- Antenna with coin / star -->
-                <rect x="48" y="4" width="4" height="10" rx="2" fill="#34d399" />
-                <circle cx="50" cy="6" r="5" fill="#fbbf24" stroke="#f59e0b" stroke-width="1.5" />
-                <defs>
-                  <linearGradient id="botGrad" x1="15" y1="15" x2="85" y2="85" gradientUnits="userSpaceOnUse">
-                    <stop stop-color="#10b981" />
-                    <stop offset="0.5" stop-color="#059669" />
-                    <stop offset="1" stop-color="#047857" />
-                  </linearGradient>
-                </defs>
+            <div id="cartoonMascotGlow" class="absolute inset-0 rounded-2xl bg-gradient-to-tr from-purple-500 to-rose-500 blur-md opacity-40 char-3d-glow"></div>
+            <!-- Cartoon SVG Container with Floating Animation -->
+            <div id="cartoonMascotContainer" class="relative w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-tr from-slate-900 to-slate-800 border border-purple-500/40 flex items-center justify-center shadow-lg char-3d-floating overflow-hidden">
+              <!-- Default Cartoon Vampire / Ant SVG (Dynamically swapped via JS) -->
+              <svg id="cartoonMascotSvg" viewBox="0 0 100 100" class="w-10 h-10 sm:w-11 sm:h-11 drop-shadow-md" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <!-- Cute Cartoon Vampire / Budget Drainer -->
+                <circle cx="50" cy="50" r="38" fill="#581c87" />
+                <!-- Vampire Cape collar -->
+                <path d="M22 28 L34 50 L18 64 Z" fill="#b91c1c" />
+                <path d="M78 28 L66 50 L82 64 Z" fill="#b91c1c" />
+                <!-- Cute Face -->
+                <ellipse cx="50" cy="52" rx="26" ry="24" fill="#f5d0fe" />
+                <!-- Hair with widow's peak -->
+                <path d="M24 45 Q36 28 50 40 Q64 28 76 45 Q66 22 50 22 Q34 22 24 45 Z" fill="#1e1b4b" />
+                <!-- Big cartoon eyes -->
+                <ellipse cx="40" cy="50" rx="5" ry="6" fill="#1e1b4b" />
+                <ellipse cx="60" cy="50" rx="5" ry="6" fill="#1e1b4b" />
+                <circle cx="39" cy="48" r="2" fill="#ffffff" />
+                <circle cx="59" cy="48" r="2" fill="#ffffff" />
+                <!-- Rosy cheeks -->
+                <circle cx="32" cy="56" r="3.5" fill="#f43f5e" opacity="0.6" />
+                <circle cx="68" cy="56" r="3.5" fill="#f43f5e" opacity="0.6" />
+                <!-- Smile with 2 tiny cute vampire fangs -->
+                <path d="M42 58 Q50 64 58 58" stroke="#1e1b4b" stroke-width="2" fill="none" />
+                <polygon points="44,59 47,59 45.5,65" fill="#ffffff" stroke="#1e1b4b" stroke-width="0.8" />
+                <polygon points="53,59 56,59 54.5,65" fill="#ffffff" stroke="#1e1b4b" stroke-width="0.8" />
               </svg>
             </div>
-            <!-- Status Badge on Bot -->
-            <span class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-[#0b0f17] flex items-center justify-center">
-              <span class="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span>
+            <!-- Alert badge icon on avatar -->
+            <span id="cartoonMascotBadgeIcon" class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-purple-600 border-2 border-[#0b0f17] flex items-center justify-center text-[10px]">
+              🧛
             </span>
           </div>
 
-          <!-- Speech & Insight bubble -->
+          <!-- Speech & Cartoon Explanation -->
           <div class="min-w-0">
-            <div class="flex items-center gap-1.5">
-              <span class="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white truncate">FinBot 3D</span>
-              <span class="text-[9px] px-2 py-0.5 rounded-full font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">AI Finance Buddy</span>
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <span id="cartoonMascotName" class="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white truncate">Count Drain-ula</span>
+              <span id="cartoonMascotTag" class="text-[9px] px-2 py-0.5 rounded-full font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">Budget Vampire Alert</span>
             </div>
-            <p id="finbotStatusMessage" class="text-[11px] sm:text-xs text-slate-600 dark:text-slate-300 font-medium mt-0.5 truncate leading-tight">
-              Vanakkam! <span class="wave-hand">👋</span> Ungaloda daily spend & budget safe-ah control-la irukku!
+            <p id="cartoonMascotSpeech" class="text-[11px] sm:text-xs text-slate-600 dark:text-slate-300 font-medium mt-0.5 leading-snug">
+              Small purchases-ah kavanama paaru! Oru tea, oru snack nu chinna chinna selavugal budget-ah urinjiduchu!
             </p>
           </div>
         </div>
 
         <!-- Right Quick Action -->
-        <a href="#expenseTableBody" class="shrink-0 hidden xs:flex items-center gap-1 text-[11px] font-bold text-emerald-500 hover:text-emerald-400 bg-white dark:bg-slate-800/80 border border-emerald-500/30 px-3 py-1.5 rounded-xl shadow-xs transition active:scale-95">
-          <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-400"></i>
-          <span>Track</span>
+        <a href="#aiInsightsGrid" class="shrink-0 flex items-center gap-1 text-[11px] font-bold text-purple-400 hover:text-purple-300 bg-white dark:bg-slate-800/80 border border-purple-500/30 px-2.5 sm:px-3 py-1.5 rounded-xl shadow-xs transition active:scale-95">
+          <span>Leaks</span>
+          <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
         </a>
       </div>
     </div>
@@ -643,29 +642,27 @@
       <!-- Empty State with 3D Animated Character Mascot -->
       <div id="emptyState" class="hidden py-10 text-center text-slate-400">
         <div class="relative w-24 h-24 mx-auto mb-3 flex items-center justify-center">
-          <div class="absolute inset-0 rounded-full bg-emerald-500/15 blur-xl char-3d-glow"></div>
-          <div class="relative w-20 h-20 rounded-2xl bg-gradient-to-tr from-slate-900 to-slate-800 border border-slate-700/80 shadow-2xl flex items-center justify-center char-3d-floating overflow-hidden">
+          <div class="absolute inset-0 rounded-full bg-amber-500/15 blur-xl char-3d-glow"></div>
+          <div class="relative w-20 h-20 rounded-2xl bg-gradient-to-tr from-slate-900 to-slate-800 border border-amber-500/40 shadow-2xl flex items-center justify-center char-3d-floating overflow-hidden">
             <svg viewBox="0 0 100 100" class="w-16 h-16 drop-shadow-lg" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="50" cy="50" r="36" fill="url(#emptyBotGrad)" />
-              <ellipse cx="40" cy="30" rx="18" ry="8" fill="white" fill-opacity="0.25" />
-              <rect x="28" y="36" width="44" height="24" rx="12" fill="#0b0f17" />
-              <!-- Inquisitive / Searching Eyes -->
-              <circle cx="40" cy="48" r="4.5" fill="#38bdf8" />
-              <circle cx="60" cy="48" r="4.5" fill="#38bdf8" />
-              <circle cx="41" cy="46" r="1.5" fill="#ffffff" />
-              <circle cx="61" cy="46" r="1.5" fill="#ffffff" />
-              <!-- Cute smile -->
-              <path d="M46 54 Q50 57 54 54" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" fill="none" />
-              <!-- Magnifying glass / search wand -->
-              <circle cx="72" cy="32" r="10" stroke="#fbbf24" stroke-width="3" fill="none" />
-              <line x1="79" y1="39" x2="88" y2="48" stroke="#f59e0b" stroke-width="3.5" stroke-linecap="round" />
-              <defs>
-                <linearGradient id="emptyBotGrad" x1="15" y1="15" x2="85" y2="85" gradientUnits="userSpaceOnUse">
-                  <stop stop-color="#3b82f6" />
-                  <stop offset="0.5" stop-color="#2563eb" />
-                  <stop offset="1" stop-color="#1d4ed8" />
-                </linearGradient>
-              </defs>
+              <!-- Cartoon Detective Ant Head -->
+              <circle cx="50" cy="48" r="24" fill="#78350f" />
+              <!-- Detective Hat -->
+              <ellipse cx="50" cy="28" rx="28" ry="6" fill="#b45309" />
+              <path d="M34 28 C34 16 66 16 66 28 Z" fill="#92400e" />
+              <rect x="34" y="25" width="32" height="3" fill="#fbbf24" />
+              <!-- Big Inquisitive Cartoon Eyes -->
+              <ellipse cx="41" cy="46" rx="6" ry="7" fill="#ffffff" />
+              <ellipse cx="59" cy="46" rx="6" ry="7" fill="#ffffff" />
+              <circle cx="43" cy="46" r="3.5" fill="#1e1b4b" />
+              <circle cx="57" cy="46" r="3.5" fill="#1e1b4b" />
+              <circle cx="41" cy="44" r="1.5" fill="#ffffff" />
+              <circle cx="55" cy="44" r="1.5" fill="#ffffff" />
+              <!-- Cute Ant Smile -->
+              <path d="M46 56 Q50 60 54 56" stroke="#1e1b4b" stroke-width="2" fill="none" />
+              <!-- Magnifying Glass held in hand -->
+              <circle cx="74" cy="62" r="12" stroke="#f59e0b" stroke-width="3" fill="#fef3c7" fill-opacity="0.3" />
+              <line x1="82" y1="70" x2="92" y2="80" stroke="#78350f" stroke-width="4" stroke-linecap="round" />
             </svg>
           </div>
         </div>
