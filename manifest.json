@@ -34,5 +34,21 @@
       "type": "image/png",
       "purpose": "maskable"
     }
+  ],
+  "shortcuts": [
+    {
+      "name": "Quick Spend",
+      "short_name": "Spend",
+      "description": "Log an expense in 1 tap",
+      "url": "./index.html?quick_add=true",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Mini Widget",
+      "short_name": "Widget",
+      "description": "Open Finly Daily Widget",
+      "url": "./widget.html",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    }
   ]
 }

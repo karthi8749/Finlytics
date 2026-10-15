@@ -3915,4 +3915,16 @@
   refreshView();
   initFirebaseSync();
 
+  // 1-Tap Quick Add Expense from Home Screen Shortcut / Widget
+  try {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('quick_add') === 'true') {
+      setTimeout(() => {
+        openAddModal();
+      }, 150);
+    }
+  } catch (e) {
+    console.warn('URL param check failed', e);
+  }
+
 })();
