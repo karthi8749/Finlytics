@@ -88,6 +88,7 @@
   let lineTrendChart = null;
   let paymentBarChart = null;
   let monthlyBarChart = null;
+  let smallLeakChart = null;
 
   // --- DOM Elements ---
   const kpiTotalSpent = document.getElementById('kpiTotalSpent');
@@ -831,147 +832,8 @@
             if (kpiBurnRateEstimate) {
               kpiBurnRateEstimate.innerHTML = `<span class="truncate">Burn Speed</span><span class="text-emerald-400 font-semibold shrink-0">₹${burnRatePerDay}/day (Safe)</span>`;
             }
-          }
         }
-
-        // --- Dynamic Cartoon Mascot Reactivity (Ant, Vampire, Piggy) ---
-        const cartoonBanner = document.getElementById('cartoonMascotBanner');
-        const cartoonSvg = document.getElementById('cartoonMascotSvg');
-        const cartoonName = document.getElementById('cartoonMascotName');
-        const cartoonTag = document.getElementById('cartoonMascotTag');
-        const cartoonSpeech = document.getElementById('cartoonMascotSpeech');
-        const cartoonBadgeIcon = document.getElementById('cartoonMascotBadgeIcon');
-        const cartoonGlow = document.getElementById('cartoonMascotGlow');
-        const cartoonContainer = document.getElementById('cartoonMascotContainer');
-
-        // Check if user has small micro-purchase leak (<= ₹200 spends)
-        const microCount = filteredList.filter(e => e.amount <= 200 && e.amount > 0).length;
-        const microTotal = filteredList.filter(e => e.amount <= 200 && e.amount > 0).reduce((sum, e) => sum + e.amount, 0);
-
-        if (cartoonBanner && cartoonSvg) {
-          if (remainingBudget <= 0) {
-            // 🧛 State 1: Count Drain-ula (Budget Vampire - Sucking budget dry)
-            cartoonBanner.className = 'relative overflow-hidden rounded-2xl bg-gradient-to-r from-rose-950/40 via-slate-900/80 to-purple-950/40 border border-rose-500/30 p-3.5 sm:p-4 shadow-md backdrop-blur-md transition-all duration-300';
-            if (cartoonGlow) cartoonGlow.className = 'absolute inset-0 rounded-2xl bg-gradient-to-tr from-rose-500 to-purple-600 blur-md opacity-40 char-3d-glow';
-            if (cartoonContainer) cartoonContainer.className = 'relative w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-tr from-slate-900 to-slate-800 border border-rose-500/50 flex items-center justify-center shadow-lg char-3d-floating overflow-hidden';
-            if (cartoonBadgeIcon) {
-              cartoonBadgeIcon.textContent = '🧛';
-              cartoonBadgeIcon.className = 'absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-rose-600 border-2 border-[#0b0f17] flex items-center justify-center text-[10px]';
-            }
-            if (cartoonName) cartoonName.textContent = 'Count Drain-ula';
-            if (cartoonTag) {
-              cartoonTag.textContent = 'Budget Vampire 🔥';
-              cartoonTag.className = 'text-[9px] px-2 py-0.5 rounded-full font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30';
-            }
-            if (cartoonSpeech) {
-              cartoonSpeech.innerHTML = `Ayyo! <strong class="text-rose-400">Budget full-ah drain aaiduchu!</strong> (${formatINR(Math.abs(remainingBudget))} over). Ini emergency purchases mattum pannunga!`;
-            }
-
-            // Vampire SVG with fangs and red eyes
-            cartoonSvg.innerHTML = `
-              <circle cx="50" cy="50" r="38" fill="#581c87" />
-              <path d="M20 28 L34 50 L16 64 Z" fill="#b91c1c" />
-              <path d="M80 28 L66 50 L84 64 Z" fill="#b91c1c" />
-              <ellipse cx="50" cy="52" rx="26" ry="24" fill="#fce7f3" />
-              <path d="M24 45 Q36 28 50 40 Q64 28 76 45 Q66 22 50 22 Q34 22 24 45 Z" fill="#1e1b4b" />
-              <ellipse cx="40" cy="50" rx="5" ry="6" fill="#ef4444" />
-              <ellipse cx="60" cy="50" rx="5" ry="6" fill="#ef4444" />
-              <circle cx="39" cy="48" r="2" fill="#ffffff" />
-              <circle cx="59" cy="48" r="2" fill="#ffffff" />
-              <path d="M42 58 Q50 64 58 58" stroke="#1e1b4b" stroke-width="2" fill="none" />
-              <polygon points="44,59 47,59 45.5,65" fill="#ffffff" stroke="#1e1b4b" stroke-width="0.8" />
-              <polygon points="53,59 56,59 54.5,65" fill="#ffffff" stroke="#1e1b4b" stroke-width="0.8" />
-            `;
-
-          } else if (microCount >= 5 && microTotal >= 500) {
-            // 🐜 State 2: Anty the Sugar Ant (Small Purchase Leak - Tea, snacks, micro UPI)
-            cartoonBanner.className = 'relative overflow-hidden rounded-2xl bg-gradient-to-r from-amber-950/40 via-slate-900/80 to-purple-950/30 border border-amber-500/30 p-3.5 sm:p-4 shadow-md backdrop-blur-md transition-all duration-300';
-            if (cartoonGlow) cartoonGlow.className = 'absolute inset-0 rounded-2xl bg-gradient-to-tr from-amber-500 to-yellow-500 blur-md opacity-40 char-3d-glow';
-            if (cartoonContainer) cartoonContainer.className = 'relative w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-tr from-slate-900 to-slate-800 border border-amber-500/50 flex items-center justify-center shadow-lg char-3d-floating overflow-hidden';
-            if (cartoonBadgeIcon) {
-              cartoonBadgeIcon.textContent = '🐜';
-              cartoonBadgeIcon.className = 'absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-amber-600 border-2 border-[#0b0f17] flex items-center justify-center text-[10px]';
-            }
-            if (cartoonName) cartoonName.textContent = 'Anty the Sugar Ant';
-            if (cartoonTag) {
-              cartoonTag.textContent = 'Small Leak Alert 🐜';
-              cartoonTag.className = 'text-[9px] px-2 py-0.5 rounded-full font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30';
-            }
-            if (cartoonSpeech) {
-              cartoonSpeech.innerHTML = `Siru thuli peruvellam! <strong class="text-amber-300">${microCount} micro-spends</strong> (tea, snacks under ₹200) serndhu <strong class="text-amber-400 mono">${formatINR(microTotal)}</strong> karanjirukku!`;
-            }
-
-            // Cute Cartoon Sugar Ant SVG carrying a rupee coin
-            cartoonSvg.innerHTML = `
-              <!-- Ant Head -->
-              <circle cx="50" cy="46" r="22" fill="#78350f" />
-              <ellipse cx="44" cy="38" rx="10" ry="5" fill="#fde68a" fill-opacity="0.3" />
-              <!-- Ant Antennae with cute tips -->
-              <path d="M42 26 Q35 12 25 14" stroke="#78350f" stroke-width="2.5" stroke-linecap="round" fill="none" />
-              <circle cx="25" cy="14" r="3.5" fill="#f59e0b" />
-              <path d="M58 26 Q65 12 75 14" stroke="#78350f" stroke-width="2.5" stroke-linecap="round" fill="none" />
-              <circle cx="75" cy="14" r="3.5" fill="#f59e0b" />
-              <!-- Big Cartoon Eyes -->
-              <ellipse cx="42" cy="44" rx="6" ry="7" fill="#ffffff" />
-              <ellipse cx="58" cy="44" rx="6" ry="7" fill="#ffffff" />
-              <circle cx="43" cy="44" r="3.5" fill="#1e1b4b" />
-              <circle cx="57" cy="44" r="3.5" fill="#1e1b4b" />
-              <circle cx="41" cy="42" r="1.5" fill="#ffffff" />
-              <circle cx="55" cy="42" r="1.5" fill="#ffffff" />
-              <!-- Ant cute mouth with tongue -->
-              <path d="M46 54 Q50 58 54 54" stroke="#1e1b4b" stroke-width="2" fill="none" />
-              <!-- Carried Gold Rupee Coin -->
-              <circle cx="50" cy="74" r="15" fill="#f59e0b" stroke="#d97706" stroke-width="2" />
-              <text x="50" y="80" font-size="14" font-weight="bold" fill="#78350f" text-anchor="middle" font-family="sans-serif">₹</text>
-            `;
-
-          } else {
-            // 🐷 State 3: Sirappu Piggy (Wise Saver / Healthy Budget)
-            cartoonBanner.className = 'relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-950/40 via-slate-900/80 to-teal-950/30 border border-emerald-500/30 p-3.5 sm:p-4 shadow-md backdrop-blur-md transition-all duration-300';
-            if (cartoonGlow) cartoonGlow.className = 'absolute inset-0 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 blur-md opacity-40 char-3d-glow';
-            if (cartoonContainer) cartoonContainer.className = 'relative w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-tr from-slate-900 to-slate-800 border border-emerald-500/50 flex items-center justify-center shadow-lg char-3d-floating overflow-hidden';
-            if (cartoonBadgeIcon) {
-              cartoonBadgeIcon.textContent = '🐷';
-              cartoonBadgeIcon.className = 'absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-600 border-2 border-[#0b0f17] flex items-center justify-center text-[10px]';
-            }
-            if (cartoonName) cartoonName.textContent = 'Piggy the Vault';
-            if (cartoonTag) {
-              cartoonTag.textContent = 'Safe Savings Shield 🛡️';
-              cartoonTag.className = 'text-[9px] px-2 py-0.5 rounded-full font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
-            }
-            if (cartoonSpeech) {
-              if (todaySpent === 0) {
-                cartoonSpeech.innerHTML = `Kasu pathiram! <span class="wave-hand">👋</span> Inaiku innum spending start aagala. ₹${Math.round(dailyTargetLimit)} safe allowance irukku!`;
-              } else {
-                cartoonSpeech.innerHTML = `Nalla control! Inaiku ₹${Math.round(todaySpent)} aagirukku, innum <strong class="text-emerald-400 mono">₹${Math.round(todayRemaining)}</strong> daily limit safe-ah irukku! 🌟`;
-              }
-            }
-
-            // Cute Cartoon Pink Piggy Bank SVG
-            cartoonSvg.innerHTML = `
-              <!-- Piggy Body -->
-              <ellipse cx="50" cy="52" rx="34" ry="28" fill="#f472b6" />
-              <!-- Ears -->
-              <polygon points="26,30 36,18 42,32" fill="#ec4899" />
-              <polygon points="74,30 64,18 58,32" fill="#ec4899" />
-              <!-- Highlight -->
-              <ellipse cx="40" cy="36" rx="14" ry="6" fill="#ffffff" fill-opacity="0.3" />
-              <!-- Big Cartoon Eyes with lash -->
-              <ellipse cx="36" cy="46" rx="5" ry="6" fill="#1e1b4b" />
-              <ellipse cx="64" cy="46" rx="5" ry="6" fill="#1e1b4b" />
-              <circle cx="34" cy="44" r="2" fill="#ffffff" />
-              <circle cx="62" cy="44" r="2" fill="#ffffff" />
-              <!-- Cute Snout with nostrils -->
-              <ellipse cx="50" cy="56" rx="13" ry="9" fill="#fbcfe8" stroke="#ec4899" stroke-width="1.5" />
-              <circle cx="46" cy="56" r="2" fill="#ec4899" />
-              <circle cx="54" cy="56" r="2" fill="#ec4899" />
-              <!-- Coin Slot on head with glowing coin -->
-              <rect x="44" y="24" width="12" height="3" rx="1.5" fill="#9d174d" />
-              <circle cx="50" cy="19" r="6" fill="#fbbf24" stroke="#f59e0b" stroke-width="1.5" />
-              <text x="50" y="23" font-size="8" font-weight="bold" fill="#78350f" text-anchor="middle">₹</text>
-            `;
-          }
-        }
+      }
       }
     }
   }
@@ -1331,8 +1193,193 @@
       }
     }
 
-    // --- Metric 3C: AI Financial Advisor & Savings Insights ---
+    // --- Metric 3C: Small Purchase Leak Pie Chart (≤ ₹200) ---
+    renderSmallLeakPieChart(filteredList);
+
+    // --- Metric 3D: AI Financial Advisor & Savings Insights ---
     renderAISpendingInsights(filteredList);
+  }
+
+  // --- Dedicated Small Purchase Leak Pie Chart (≤ ₹200) ---
+  function renderSmallLeakPieChart(filteredList) {
+    const isDark = document.documentElement.classList.contains('dark');
+
+    const badgeEl = document.getElementById('smallLeakTotalBadge');
+    const canvasEl = document.getElementById('smallLeakPieChart');
+    const noDataEl = document.getElementById('noSmallLeakData');
+    const listEl = document.getElementById('smallLeakMerchantList');
+    const noteEl = document.getElementById('smallLeakSummaryText');
+
+    if (!canvasEl) return;
+
+    // Filter transactions <= ₹200 and > 0
+    const microItems = (filteredList || []).filter(e => (e.amount || 0) <= 200 && (e.amount || 0) > 0);
+    const microTotal = microItems.reduce((sum, e) => sum + e.amount, 0);
+
+    if (badgeEl) {
+      badgeEl.textContent = `${formatINR(microTotal)} (${microItems.length} txns)`;
+    }
+
+    if (microItems.length === 0) {
+      canvasEl.classList.add('hidden');
+      if (noDataEl) noDataEl.classList.remove('hidden');
+      if (listEl) {
+        listEl.innerHTML = `
+          <div class="py-6 text-center text-xs text-slate-400 bg-slate-900/40 rounded-xl border border-slate-800">
+            No small leaks (≤ ₹200) found in selected period.
+          </div>
+        `;
+      }
+      if (noteEl) {
+        noteEl.innerHTML = `Super! Intha period-la small purchases (≤ ₹200) ethuvum illa. Sneaky ants kitrunthu pocket safe! 🐜✨`;
+      }
+      if (smallLeakChart) {
+        smallLeakChart.destroy();
+        smallLeakChart = null;
+      }
+      return;
+    }
+
+    canvasEl.classList.remove('hidden');
+    if (noDataEl) noDataEl.classList.add('hidden');
+
+    // Aggregate by title / payee name
+    const payeeMap = {};
+    microItems.forEach(item => {
+      let name = (item.title || 'Micro Expense').trim();
+      name = name.replace(/^upi[-:\s]+/i, '').trim();
+      if (!name) name = 'Micro Expense';
+      if (!payeeMap[name]) {
+        payeeMap[name] = { name, amount: 0, count: 0 };
+      }
+      payeeMap[name].amount += item.amount;
+      payeeMap[name].count += 1;
+    });
+
+    const sortedPayees = Object.values(payeeMap).sort((a, b) => b.amount - a.amount);
+    const topPayees = sortedPayees.slice(0, 5);
+    const otherPayees = sortedPayees.slice(5);
+
+    const labels = topPayees.map(p => p.name);
+    const dataValues = topPayees.map(p => p.amount);
+
+    if (otherPayees.length > 0) {
+      const otherTotal = otherPayees.reduce((s, p) => s + p.amount, 0);
+      labels.push(`Other Micro (${otherPayees.length})`);
+      dataValues.push(otherTotal);
+    }
+
+    const sliceColors = [
+      '#f59e0b', // Amber 500
+      '#fbbf24', // Amber 400
+      '#f97316', // Orange 500
+      '#ef4444', // Red 500
+      '#ec4899', // Pink 500
+      '#8b5cf6', // Purple 500
+      '#64748b'  // Slate 500
+    ];
+
+    if (smallLeakChart) smallLeakChart.destroy();
+
+    const ctx = canvasEl.getContext('2d');
+    smallLeakChart = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: labels,
+        datasets: [{
+          data: dataValues,
+          backgroundColor: sliceColors.slice(0, labels.length),
+          borderWidth: 2,
+          borderColor: isDark ? '#0f172a' : '#ffffff',
+          hoverOffset: 4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '62%',
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => {
+                const val = ctx.raw || 0;
+                const pct = microTotal > 0 ? ((val / microTotal) * 100).toFixed(1) : 0;
+                return ` ${ctx.label}: ${formatINR(val)} (${pct}%)`;
+              }
+            }
+          }
+        }
+      }
+    });
+
+    // Populate Ranked Merchant Breakdown List
+    if (listEl) {
+      listEl.innerHTML = topPayees.map((payee, idx) => {
+        const pct = microTotal > 0 ? ((payee.amount / microTotal) * 100).toFixed(0) : 0;
+        const avg = payee.count > 0 ? Math.round(payee.amount / payee.count) : 0;
+        const color = sliceColors[idx % sliceColors.length];
+        const safeName = payee.name.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+        return `
+          <div class="flex items-center justify-between p-2 rounded-xl bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800/80 transition-colors text-xs">
+            <div class="flex items-center gap-2 min-w-0 pr-2">
+              <span class="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 text-slate-950 shadow-xs" style="background-color: ${color}">
+                ${idx + 1}
+              </span>
+              <div class="truncate">
+                <div class="font-semibold text-slate-200 truncate">${safeName}</div>
+                <div class="text-[10px] text-slate-400 flex items-center gap-1.5">
+                  <span>${payee.count} purchases</span>
+                  <span>•</span>
+                  <span>Avg: ₹${avg}</span>
+                </div>
+              </div>
+            </div>
+            <div class="text-right shrink-0">
+              <div class="font-bold text-amber-400 mono">${formatINR(payee.amount)}</div>
+              <div class="text-[10px] text-slate-400 font-medium">${pct}% leak</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      if (otherPayees.length > 0) {
+        const otherTotal = otherPayees.reduce((s, p) => s + p.amount, 0);
+        const otherCount = otherPayees.reduce((s, p) => s + p.count, 0);
+        const otherPct = microTotal > 0 ? ((otherTotal / microTotal) * 100).toFixed(0) : 0;
+        listEl.innerHTML += `
+          <div class="flex items-center justify-between p-2 rounded-xl bg-slate-900/40 border border-slate-800/50 text-xs">
+            <div class="flex items-center gap-2 min-w-0 pr-2">
+              <span class="w-5 h-5 rounded-full bg-slate-700 text-slate-300 flex items-center justify-center text-[10px] font-bold shrink-0">
+                +
+              </span>
+              <div class="truncate">
+                <div class="font-semibold text-slate-300 truncate">${otherPayees.length} other merchants</div>
+                <div class="text-[10px] text-slate-400">${otherCount} micro-spends</div>
+              </div>
+            </div>
+            <div class="text-right shrink-0">
+              <div class="font-bold text-slate-300 mono">${formatINR(otherTotal)}</div>
+              <div class="text-[10px] text-slate-400">${otherPct}% leak</div>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    // Populate Tanglish Insight Note
+    if (noteEl) {
+      const topPayee = topPayees[0];
+      const topPct = microTotal > 0 ? ((topPayee.amount / microTotal) * 100).toFixed(0) : 0;
+      const safeTopName = topPayee.name.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      noteEl.innerHTML = `
+        <strong>${microItems.length} micro-spends (≤ ₹200)</strong> serndhu motham <strong class="text-amber-300 mono">${formatINR(microTotal)}</strong> karanjirukku!
+        Adhigama <span class="text-amber-300 font-semibold underline decoration-amber-500/50">${safeTopName}</span> ku mattum <strong class="text-amber-300 mono">${formatINR(topPayee.amount)}</strong> (${topPct}%) poyirukku. Daily control pannina maasathuku ~${formatINR(microTotal * 0.4)} save aagum! 🐜
+      `;
+    }
   }
 
   // Smart Engine to produce high-value actionable financial advice & leak detection

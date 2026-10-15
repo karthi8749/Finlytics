@@ -108,10 +108,43 @@
     .char-3d-glow {
       animation: pulseGlow 3s ease-in-out infinite;
     }
-    .wave-hand {
-      transform-origin: 70% 70%;
-      display: inline-block;
-      animation: waveHand 2.2s infinite ease-in-out;
+    @keyframes marchAnts {
+      0% {
+        transform: translateX(0);
+      }
+      100% {
+        transform: translateX(-50%);
+      }
+    }
+    @keyframes antWiggle {
+      0%, 100% { transform: translateY(0px) rotate(0deg); }
+      50% { transform: translateY(-3px) rotate(3deg); }
+    }
+    .marching-ants-track {
+      position: relative;
+      overflow: hidden;
+      width: 100%;
+      height: 38px;
+      display: flex;
+      align-items: center;
+      mask-image: linear-gradient(to right, transparent, black 4%, black 96%, transparent);
+      -webkit-mask-image: linear-gradient(to right, transparent, black 4%, black 96%, transparent);
+    }
+    .ant-caravan {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      width: max-content;
+      animation: marchAnts 24s linear infinite;
+    }
+    .ant-caravan:hover {
+      animation-play-state: paused;
+    }
+    .ant-walker {
+      animation: antWiggle 0.4s ease-in-out infinite alternate;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
     }
 
     /* Mobile optimized full-box tap for date inputs */
@@ -278,67 +311,6 @@
 
   <!-- Main Container (Full Width - Zero Wasted Space) -->
   <main class="w-full max-w-full px-3 sm:px-6 lg:px-8 py-3 sm:py-5 space-y-4 sm:space-y-6 overflow-x-hidden pb-24 sm:pb-6">
-
-    <!-- Cartoon Financial Mascot Banner (Vampire, Ant & Piggy Cartoon Alert) -->
-    <div id="cartoonMascotBanner" class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-purple-950/40 via-slate-900/80 to-amber-950/30 border border-purple-500/30 p-3.5 sm:p-4 shadow-md backdrop-blur-md transition-all duration-300">
-      <div class="flex items-center justify-between gap-3">
-        <!-- Cartoon Character Avatar -->
-        <div class="flex items-center gap-3 min-w-0">
-          <div class="relative shrink-0 w-13 h-13 sm:w-15 sm:h-15 flex items-center justify-center">
-            <!-- Ambient Glow -->
-            <div id="cartoonMascotGlow" class="absolute inset-0 rounded-2xl bg-gradient-to-tr from-purple-500 to-rose-500 blur-md opacity-40 char-3d-glow"></div>
-            <!-- Cartoon SVG Container with Floating Animation -->
-            <div id="cartoonMascotContainer" class="relative w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-tr from-slate-900 to-slate-800 border border-purple-500/40 flex items-center justify-center shadow-lg char-3d-floating overflow-hidden">
-              <!-- Default Cartoon Vampire / Ant SVG (Dynamically swapped via JS) -->
-              <svg id="cartoonMascotSvg" viewBox="0 0 100 100" class="w-10 h-10 sm:w-11 sm:h-11 drop-shadow-md" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <!-- Cute Cartoon Vampire / Budget Drainer -->
-                <circle cx="50" cy="50" r="38" fill="#581c87" />
-                <!-- Vampire Cape collar -->
-                <path d="M22 28 L34 50 L18 64 Z" fill="#b91c1c" />
-                <path d="M78 28 L66 50 L82 64 Z" fill="#b91c1c" />
-                <!-- Cute Face -->
-                <ellipse cx="50" cy="52" rx="26" ry="24" fill="#f5d0fe" />
-                <!-- Hair with widow's peak -->
-                <path d="M24 45 Q36 28 50 40 Q64 28 76 45 Q66 22 50 22 Q34 22 24 45 Z" fill="#1e1b4b" />
-                <!-- Big cartoon eyes -->
-                <ellipse cx="40" cy="50" rx="5" ry="6" fill="#1e1b4b" />
-                <ellipse cx="60" cy="50" rx="5" ry="6" fill="#1e1b4b" />
-                <circle cx="39" cy="48" r="2" fill="#ffffff" />
-                <circle cx="59" cy="48" r="2" fill="#ffffff" />
-                <!-- Rosy cheeks -->
-                <circle cx="32" cy="56" r="3.5" fill="#f43f5e" opacity="0.6" />
-                <circle cx="68" cy="56" r="3.5" fill="#f43f5e" opacity="0.6" />
-                <!-- Smile with 2 tiny cute vampire fangs -->
-                <path d="M42 58 Q50 64 58 58" stroke="#1e1b4b" stroke-width="2" fill="none" />
-                <polygon points="44,59 47,59 45.5,65" fill="#ffffff" stroke="#1e1b4b" stroke-width="0.8" />
-                <polygon points="53,59 56,59 54.5,65" fill="#ffffff" stroke="#1e1b4b" stroke-width="0.8" />
-              </svg>
-            </div>
-            <!-- Alert badge icon on avatar -->
-            <span id="cartoonMascotBadgeIcon" class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-purple-600 border-2 border-[#0b0f17] flex items-center justify-center text-[10px]">
-              🧛
-            </span>
-          </div>
-
-          <!-- Speech & Cartoon Explanation -->
-          <div class="min-w-0">
-            <div class="flex items-center gap-1.5 flex-wrap">
-              <span id="cartoonMascotName" class="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white truncate">Count Drain-ula</span>
-              <span id="cartoonMascotTag" class="text-[9px] px-2 py-0.5 rounded-full font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">Budget Vampire Alert</span>
-            </div>
-            <p id="cartoonMascotSpeech" class="text-[11px] sm:text-xs text-slate-600 dark:text-slate-300 font-medium mt-0.5 leading-snug">
-              Small purchases-ah kavanama paaru! Oru tea, oru snack nu chinna chinna selavugal budget-ah urinjiduchu!
-            </p>
-          </div>
-        </div>
-
-        <!-- Right Quick Action -->
-        <a href="#aiInsightsGrid" class="shrink-0 flex items-center gap-1 text-[11px] font-bold text-purple-400 hover:text-purple-300 bg-white dark:bg-slate-800/80 border border-purple-500/30 px-2.5 sm:px-3 py-1.5 rounded-xl shadow-xs transition active:scale-95">
-          <span>Leaks</span>
-          <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
-        </a>
-      </div>
-    </div>
 
     <!-- Section 1: KPI Cards -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -564,9 +536,137 @@
           </div>
         </div>
       </div>
+    <!-- Section 3C: 🐜 Small Purchases Leak (Micro-Spends ≤ ₹200) with Marching Ants -->
+    <div class="bg-gradient-to-br from-amber-950/30 via-slate-900/90 to-amber-900/20 border border-amber-500/30 rounded-2xl p-3.5 sm:p-5 shadow-lg space-y-3.5 sm:space-y-4">
+      <!-- Header & Live Leak Stats -->
+      <div class="flex items-center justify-between flex-wrap gap-2 pb-2.5 border-b border-amber-500/20">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <div class="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-lg shrink-0 shadow-inner">
+            🐜
+          </div>
+          <div class="min-w-0">
+            <h2 class="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-100 flex items-center gap-2 flex-wrap">
+              <span>Small Purchases Leak</span>
+              <span class="text-[9px] uppercase px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-extrabold border border-amber-500/30">≤ ₹200 Leaks</span>
+            </h2>
+            <p class="text-[11px] text-slate-400 font-medium truncate sm:whitespace-normal">Chinna tea, snacks, bakery selavugal yaruku adhigam aaguthu?</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <span id="smallLeakTotalBadge" class="text-xs font-bold text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2.5 py-1 rounded-xl">
+            ₹0 Leaked (0 txns)
+          </span>
+        </div>
+      </div>
+
+      <!-- Marching Cartoon Ants Caravan (Animated Line) -->
+      <div class="relative bg-slate-950/70 rounded-xl border border-amber-500/25 py-2 px-1 overflow-hidden shadow-inner">
+        <div class="marching-ants-track">
+          <div class="ant-caravan">
+            <!-- Set 1 of marching cartoon ants carrying coins/snacks -->
+            <div class="ant-walker px-2 py-1 rounded-full bg-slate-900/90 border border-amber-500/30 shadow-xs">
+              <span class="text-base select-none">🐜</span>
+              <span class="text-[10px] font-bold text-amber-300 mono">₹15 Chai</span>
+            </div>
+            <div class="ant-walker px-2 py-1 rounded-full bg-slate-900/90 border border-amber-500/30 shadow-xs">
+              <span class="text-base select-none">🐜</span>
+              <span class="text-[10px] font-bold text-amber-300 mono">₹40 Snacks</span>
+            </div>
+            <div class="ant-walker px-2 py-1 rounded-full bg-slate-900/90 border border-amber-500/30 shadow-xs">
+              <span class="text-base select-none">🐜</span>
+              <span class="text-[10px] font-bold text-amber-300 mono">₹20 Bakery</span>
+            </div>
+            <div class="ant-walker px-2 py-1 rounded-full bg-slate-900/90 border border-amber-500/30 shadow-xs">
+              <span class="text-base select-none">🐜</span>
+              <span class="text-[10px] font-bold text-amber-300 mono">₹50 Juice</span>
+            </div>
+            <div class="ant-walker px-2 py-1 rounded-full bg-slate-900/90 border border-amber-500/30 shadow-xs">
+              <span class="text-base select-none">🐜</span>
+              <span class="text-[10px] font-bold text-amber-300 mono">₹10 Coffee</span>
+            </div>
+            <div class="ant-walker px-2 py-1 rounded-full bg-slate-900/90 border border-amber-500/30 shadow-xs">
+              <span class="text-base select-none">🐜</span>
+              <span class="text-[10px] font-bold text-amber-300 mono">₹80 Auto</span>
+            </div>
+            <div class="ant-walker px-2 py-1 rounded-full bg-slate-900/90 border border-amber-500/30 shadow-xs">
+              <span class="text-base select-none">🐜</span>
+              <span class="text-[10px] font-bold text-amber-300 mono">₹25 Puff</span>
+            </div>
+            <div class="ant-walker px-2 py-1 rounded-full bg-slate-900/90 border border-amber-500/30 shadow-xs">
+              <span class="text-base select-none">🐜</span>
+              <span class="text-[10px] font-bold text-amber-300 mono">₹60 Street Food</span>
+            </div>
+            <!-- Set 2 (Identical Clone for continuous infinite loop without jumping) -->
+            <div class="ant-walker px-2 py-1 rounded-full bg-slate-900/90 border border-amber-500/30 shadow-xs">
+              <span class="text-base select-none">🐜</span>
+              <span class="text-[10px] font-bold text-amber-300 mono">₹15 Chai</span>
+            </div>
+            <div class="ant-walker px-2 py-1 rounded-full bg-slate-900/90 border border-amber-500/30 shadow-xs">
+              <span class="text-base select-none">🐜</span>
+              <span class="text-[10px] font-bold text-amber-300 mono">₹40 Snacks</span>
+            </div>
+            <div class="ant-walker px-2 py-1 rounded-full bg-slate-900/90 border border-amber-500/30 shadow-xs">
+              <span class="text-base select-none">🐜</span>
+              <span class="text-[10px] font-bold text-amber-300 mono">₹20 Bakery</span>
+            </div>
+            <div class="ant-walker px-2 py-1 rounded-full bg-slate-900/90 border border-amber-500/30 shadow-xs">
+              <span class="text-base select-none">🐜</span>
+              <span class="text-[10px] font-bold text-amber-300 mono">₹50 Juice</span>
+            </div>
+            <div class="ant-walker px-2 py-1 rounded-full bg-slate-900/90 border border-amber-500/30 shadow-xs">
+              <span class="text-base select-none">🐜</span>
+              <span class="text-[10px] font-bold text-amber-300 mono">₹10 Coffee</span>
+            </div>
+            <div class="ant-walker px-2 py-1 rounded-full bg-slate-900/90 border border-amber-500/30 shadow-xs">
+              <span class="text-base select-none">🐜</span>
+              <span class="text-[10px] font-bold text-amber-300 mono">₹80 Auto</span>
+            </div>
+            <div class="ant-walker px-2 py-1 rounded-full bg-slate-900/90 border border-amber-500/30 shadow-xs">
+              <span class="text-base select-none">🐜</span>
+              <span class="text-[10px] font-bold text-amber-300 mono">₹25 Puff</span>
+            </div>
+            <div class="ant-walker px-2 py-1 rounded-full bg-slate-900/90 border border-amber-500/30 shadow-xs">
+              <span class="text-base select-none">🐜</span>
+              <span class="text-[10px] font-bold text-amber-300 mono">₹60 Street Food</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Small Purchases Leak Pie Chart & Ranked Merchant Breakdown -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+        <!-- Donut / Pie Chart -->
+        <div class="relative h-52 sm:h-56 flex items-center justify-center bg-slate-950/40 rounded-xl p-2.5 border border-slate-800">
+          <canvas id="smallLeakPieChart"></canvas>
+          <div id="noSmallLeakData" class="hidden absolute inset-0 flex flex-col items-center justify-center text-center p-3">
+            <span class="text-3xl mb-1.5 animate-bounce">🐜✨</span>
+            <p class="text-xs text-slate-300 font-semibold">No small leaks detected (≤ ₹200)!</p>
+            <p class="text-[10px] text-slate-400 mt-0.5">Your pocket is completely safe from sneaky micro-spends.</p>
+          </div>
+        </div>
+
+        <!-- Ranked Payees / Merchants List -->
+        <div class="space-y-2">
+          <div class="flex items-center justify-between text-[11px] font-semibold text-slate-400 px-1">
+            <span>Top Small Leak Payees</span>
+            <span>Total & Share</span>
+          </div>
+          <div id="smallLeakMerchantList" class="space-y-2 max-h-52 overflow-y-auto pr-1">
+            <!-- Populated dynamically via JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Micro-Advice Tanglish Banner -->
+      <div id="smallLeakSummaryNote" class="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-xs text-amber-200/90 flex items-start gap-2">
+        <span class="text-base leading-none shrink-0 mt-0.5">💡</span>
+        <div id="smallLeakSummaryText" class="text-[11px] sm:text-xs text-slate-300 font-medium leading-relaxed">
+          Analyzing micro-transactions...
+        </div>
+      </div>
     </div>
 
-    <!-- Section 3C: 🤖 AI Spending Insights & Savings Advisor -->
+    <!-- Section 3D: 🤖 AI Spending Insights & Savings Advisor -->
     <div class="bg-gradient-to-r from-emerald-950/40 via-slate-900/90 to-blue-950/40 border border-emerald-500/20 dark:border-emerald-500/30 rounded-2xl p-4 sm:p-5 shadow-lg relative overflow-hidden space-y-3.5">
       <div class="flex items-center justify-between pb-2 border-b border-emerald-500/10">
         <div class="flex items-center gap-2.5">
