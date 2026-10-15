@@ -737,31 +737,39 @@
 
     const topCat1Bar = document.getElementById('topCat1Bar');
     const topCat2Bar = document.getElementById('topCat2Bar');
+    const topCat1Dot = document.getElementById('topCat1Dot');
+    const topCat2Dot = document.getElementById('topCat2Dot');
     const kpiRunnerUpCategory = document.getElementById('kpiRunnerUpCategory');
     const kpiRunnerUpAmount = document.getElementById('kpiRunnerUpAmount');
     const kpiTop2SharePct = document.getElementById('kpiTop2SharePct');
+
+    // Vibrant distinct color palette for Top 1 and Top 2
+    const color1 = '#10b981'; // Vibrant Emerald
+    const color2 = '#06b6d4'; // Vibrant Cyan / Sky
 
     if (topCatAmt > 0) {
       const topCatPct = totalSpent > 0 ? (topCatAmt / totalSpent) * 100 : 0;
       kpiTopCategory.textContent = `${CATEGORY_ICONS[topCat] || '📦'} ${topCat}`;
       kpiTopCategoryAmount.textContent = `${formatINR(topCatAmt)} (${topCatPct.toFixed(1)}%)`;
 
+      if (topCat1Dot) topCat1Dot.style.backgroundColor = color1;
       if (topCat1Bar) {
         topCat1Bar.style.width = `${Math.min(100, topCatPct)}%`;
-        topCat1Bar.style.backgroundColor = CATEGORY_COLORS[topCat] || '#f59e0b';
+        topCat1Bar.style.backgroundColor = color1;
       }
 
       if (runnerUpCat && runnerUpAmt > 0) {
         const runnerUpPct = totalSpent > 0 ? (runnerUpAmt / totalSpent) * 100 : 0;
         const combinedPct = topCatPct + runnerUpPct;
 
+        if (topCat2Dot) topCat2Dot.style.backgroundColor = color2;
         if (kpiRunnerUpCategory) kpiRunnerUpCategory.textContent = `${CATEGORY_ICONS[runnerUpCat] || '🏷️'} ${runnerUpCat}`;
         if (kpiRunnerUpAmount) kpiRunnerUpAmount.textContent = `${formatINR(runnerUpAmt)} (${runnerUpPct.toFixed(1)}%)`;
         if (kpiTop2SharePct) kpiTop2SharePct.textContent = `${combinedPct.toFixed(0)}% of total spend`;
 
         if (topCat2Bar) {
           topCat2Bar.style.width = `${Math.min(100 - topCatPct, runnerUpPct)}%`;
-          topCat2Bar.style.backgroundColor = CATEGORY_COLORS[runnerUpCat] || '#3b82f6';
+          topCat2Bar.style.backgroundColor = color2;
         }
       } else {
         if (kpiRunnerUpCategory) kpiRunnerUpCategory.textContent = 'None';
