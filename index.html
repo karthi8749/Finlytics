@@ -281,21 +281,24 @@
       <div class="flex items-center justify-between gap-3 flex-wrap sm:flex-nowrap">
         
         <!-- Mascot Avatar & Mood Status -->
-        <div class="flex items-center gap-3 min-w-0">
+        <div class="flex items-center gap-3.5 min-w-0 flex-1">
           <div class="relative shrink-0">
             <img id="moodMascotImg" src="assets/mascots/ant-mascot.png" alt="Mood Mascot" class="h-12 sm:h-14 w-auto object-contain drop-shadow-xl mascot-float select-none" />
-            <span id="moodPulseDot" class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-400 border-2 border-slate-950"></span>
+            <span id="moodPulseContainer" class="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5">
+              <span id="moodPulsePing" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span id="moodPulseDot" class="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500 border-2 border-slate-950"></span>
+            </span>
           </div>
-          <div class="min-w-0">
+          <div class="min-w-0 flex-1 space-y-0.5">
             <div class="flex items-center gap-2 flex-wrap">
               <span id="moodStatusBadge" class="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
                 🟢 Budget Healthy
               </span>
-              <span id="moodLeakSummary" class="text-[11px] text-slate-400 font-medium truncate">
+              <span id="moodLeakSummary" class="text-[11px] text-slate-400 font-medium whitespace-normal break-words">
                 Mascots are chilling!
               </span>
             </div>
-            <p id="moodAdviceText" class="text-xs sm:text-sm font-semibold text-white tracking-tight mt-0.5 truncate sm:whitespace-normal">
+            <p id="moodAdviceText" class="text-xs sm:text-sm font-semibold text-white tracking-tight mt-1 whitespace-normal break-words leading-relaxed">
               Spends are well under budget control. Keep it up!
             </p>
           </div>
@@ -1248,7 +1251,7 @@
   </div>
 
   <!-- App Logic -->
-  <script src="app.js?v=54"></script>
+  <script src="app.js?v=55"></script>
 </body>
 </html>
 

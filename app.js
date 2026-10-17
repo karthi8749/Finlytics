@@ -1773,16 +1773,28 @@
     const banner = document.getElementById('mascotMoodBanner');
     const mascotImg = document.getElementById('moodMascotImg');
     const pulseDot = document.getElementById('moodPulseDot');
+    const pulsePing = document.getElementById('moodPulsePing');
     const statusBadge = document.getElementById('moodStatusBadge');
     const leakSummary = document.getElementById('moodLeakSummary');
     const adviceText = document.getElementById('moodAdviceText');
 
     if (!banner || !mascotImg) return;
 
+    function updatePulseStatus(color, isPinging = true) {
+      if (pulsePing) {
+        pulsePing.className = isPinging 
+          ? `animate-ping absolute inline-flex h-full w-full rounded-full bg-${color}-400 opacity-75`
+          : 'hidden';
+      }
+      if (pulseDot) {
+        pulseDot.className = `relative inline-flex rounded-full h-3.5 w-3.5 bg-${color}-500 border-2 border-slate-950 shadow-sm`;
+      }
+    }
+
     if (!data || !data.filteredList || data.filteredList.length === 0) {
       mascotImg.src = 'assets/mascots/ant-mascot.png';
       mascotImg.className = 'h-12 sm:h-14 w-auto object-contain drop-shadow-xl mascot-float select-none';
-      if (pulseDot) pulseDot.className = 'absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-slate-400 border-2 border-slate-950';
+      updatePulseStatus('slate', false);
       if (statusBadge) {
         statusBadge.className = 'text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-500/15 text-slate-400 border border-slate-500/20';
         statusBadge.textContent = '⚪ Ready to Track';
@@ -1802,7 +1814,7 @@
     if (isVampireAlert && topTxn) {
       mascotImg.src = 'assets/mascots/vampire-mascot.png';
       mascotImg.className = 'h-12 sm:h-14 w-auto object-contain drop-shadow-xl mascot-float select-none';
-      if (pulseDot) pulseDot.className = 'absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-rose-500 animate-ping border-2 border-slate-950';
+      updatePulseStatus('rose', true);
       if (statusBadge) {
         statusBadge.className = 'text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30';
         statusBadge.textContent = '🔴 Vampire Drain Active';
@@ -1812,7 +1824,7 @@
     } else if (isFoodAlert) {
       mascotImg.src = 'assets/mascots/dino-mascot.png';
       mascotImg.className = 'h-12 sm:h-14 w-auto object-contain drop-shadow-xl mascot-bob select-none';
-      if (pulseDot) pulseDot.className = 'absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-400 border-2 border-slate-950';
+      updatePulseStatus('emerald', true);
       if (statusBadge) {
         statusBadge.className = 'text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
         statusBadge.textContent = '🦖 Foodie Dino Feasting!';
@@ -1822,7 +1834,7 @@
     } else if (isMicroAlert) {
       mascotImg.src = 'assets/mascots/ant-mascot.png';
       mascotImg.className = 'h-12 sm:h-14 w-auto object-contain drop-shadow-xl mascot-bob select-none';
-      if (pulseDot) pulseDot.className = 'absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-amber-400 border-2 border-slate-950';
+      updatePulseStatus('amber', true);
       if (statusBadge) {
         statusBadge.className = 'text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30';
         statusBadge.textContent = '🐜 Sugar Ant Micro-Leak';
@@ -1832,7 +1844,7 @@
     } else if (isGhostAlert) {
       mascotImg.src = 'assets/mascots/ghost-mascot.png';
       mascotImg.className = 'h-12 sm:h-14 w-auto object-contain drop-shadow-xl mascot-float select-none';
-      if (pulseDot) pulseDot.className = 'absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-indigo-400 border-2 border-slate-950';
+      updatePulseStatus('indigo', true);
       if (statusBadge) {
         statusBadge.className = 'text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-400 border border-indigo-500/30';
         statusBadge.textContent = '👻 Ghost Mandates Active';
@@ -1842,7 +1854,7 @@
     } else {
       mascotImg.src = 'assets/mascots/ant-mascot.png';
       mascotImg.className = 'h-12 sm:h-14 w-auto object-contain drop-shadow-xl mascot-float select-none';
-      if (pulseDot) pulseDot.className = 'absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-400 border-2 border-slate-950';
+      updatePulseStatus('emerald', false);
       if (statusBadge) {
         statusBadge.className = 'text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20';
         statusBadge.textContent = '🟢 Budget Healthy';
