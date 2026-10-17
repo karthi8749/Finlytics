@@ -1,0 +1,11 @@
+# Temporary & testing files
+full_refs_map.json
+test_pdf.js
+pdf.min.js
+pdf.worker.js
+
+# OS / Editor files
+.DS_Store
+Thumbs.db
+*.log
+.vscode/

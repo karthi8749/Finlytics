@@ -1475,39 +1475,91 @@
           Add or import transactions to activate AI financial analysis & savings recommendations.
         </div>
       `;
+      updateMascotMoodBanner(null);
       return;
     }
 
     const totalSpent = filteredList.reduce((acc, c) => acc + (c.amount || 0), 0);
     const insights = [];
 
-    // 1. Food & Dining / Delivery Leak Detection
-    const foodItems = filteredList.filter(e => e.category === 'Food & Dining' || /swiggy|zomato|eats|kfc|mcdonald/i.test(e.title || ''));
+    // 1. Food & Dining / Delivery Leak Detection - 🦖 Foodie Dino Mascot
+    const foodItems = filteredList.filter(e => e.category === 'Food & Dining' || /swiggy|zomato|kfc|mcdonald|domino|pizza|burger|eats|hotel|bhavan|bakery|canteen|food/i.test(e.title || ''));
     const foodSum = foodItems.reduce((s, e) => s + e.amount, 0);
     const foodPct = totalSpent > 0 ? (foodSum / totalSpent) * 100 : 0;
 
-    if (foodPct >= 25 && foodSum > 1500) {
+    if (foodItems.length > 0) {
       insights.push({
-        type: 'leak',
+        type: 'food_dino',
         icon: 'utensils',
-        color: 'rose',
-        badge: 'Food Spending Alert',
-        title: `High Dining & Delivery (${foodPct.toFixed(0)}%)`,
-        desc: `You spent ${formatINR(foodSum)} across ${foodItems.length} transactions. Cooking at home 2 more days/week can save around ~${formatINR(foodSum * 0.35)}/month.`
+        mascot: 'assets/mascots/dino-mascot.png',
+        animation: 'mascot-bob',
+        color: 'emerald',
+        badge: '🦖 Foodie Dino (Dining Monster)',
+        title: `${foodItems.length} Food Outflows (${formatINR(foodSum)})`,
+        desc: `${formatINR(foodSum)} spent on food & deliveries (${foodPct.toFixed(0)}%). Dino-ku food kuduthu budget karanjirukku!`
       });
     }
 
-    // 2. Micro-Transactions / Small Leaks (transactions <= ₹200)
+    // 2. Micro-Transactions / Small Leaks (transactions <= ₹200) - 🐜 Sugar Ant Mascot
     const microItems = filteredList.filter(e => e.amount <= 200 && e.amount > 0);
     const microSum = microItems.reduce((s, e) => s + e.amount, 0);
-    if (microItems.length >= 6 && microSum > 500) {
+    if (microItems.length >= 3 && microSum > 100) {
       insights.push({
         type: 'micro',
         icon: 'coffee',
+        mascot: 'assets/mascots/ant-mascot.png',
+        animation: 'mascot-bob',
         color: 'amber',
-        badge: '🐜 Small Purchases Leak (Sugar Ant Alert)',
+        badge: '🐜 Sugar Ant Micro-Spends',
         title: `${microItems.length} Micro-Spends (Total: ${formatINR(microSum)})`,
         desc: `Chinna chinna tea, snacks, micro UPI spends (${microItems.length} times) serndhu ${formatINR(microSum)} karanjirukku! Idhu oru silent wallet drain.`
+      });
+    }
+
+    // 2B. Ghost Subscriptions / Recurring Phantom Leaks - 👻 Ghost Mascot
+    const subRegex = /netflix|prime|amazon prime|hotstar|disney|spotify|youtube|apple|google\s*(?:storage|one|play)|gym|cult|membership|zee5|sonyliv|adobe|chatgpt|openai|icloud|subscription|autopay|mandate|amc|charges|maintenance|recharge|airtel|jio|vi|broadband|wifi|electricity|tneb|eb\s*bill|bill/i;
+    const subItems = filteredList.filter(e => subRegex.test(e.title || '') || subRegex.test(e.notes || '') || e.category === 'Bills & Utilities');
+    const subSum = subItems.reduce((s, e) => s + e.amount, 0);
+    if (subItems.length > 0) {
+      insights.push({
+        type: 'ghost_sub',
+        icon: 'credit-card',
+        mascot: 'assets/mascots/ghost-mascot.png',
+        animation: 'mascot-float',
+        color: 'indigo',
+        badge: '👻 Ghost Subscriptions (Phantom Leak)',
+        title: `${subItems.length} Recurring/Bills (${formatINR(subSum)})`,
+        desc: `${formatINR(subSum)} deducted across ${subItems.length} recurring mandates, bills & subscriptions. Unused services wallet-ah silent-aa drain pannum!`
+      });
+    } else {
+      insights.push({
+        type: 'ghost_sub',
+        icon: 'shield-check',
+        mascot: 'assets/mascots/ghost-mascot.png',
+        animation: 'mascot-float',
+        color: 'indigo',
+        badge: '👻 Ghost Subscriptions Audit',
+        title: `Zero Hidden Drains!`,
+        desc: `No sneaky recurring OTT or subscription leaks detected in this period. Your automatic recurring outgo is safe.`
+      });
+    }
+
+    // 2C. Largest Single Outflow Alert - 🧛 Vampire Drain
+    const sortedByAmount = [...filteredList].sort((a, b) => b.amount - a.amount);
+    let topTxn = null;
+    let topPct = 0;
+    if (sortedByAmount.length > 0) {
+      topTxn = sortedByAmount[0];
+      topPct = totalSpent > 0 ? ((topTxn.amount / totalSpent) * 100).toFixed(0) : 0;
+      insights.push({
+        type: 'heavy_outflow',
+        icon: 'zap',
+        mascot: 'assets/mascots/vampire-mascot.png',
+        animation: 'mascot-float',
+        color: 'rose',
+        badge: '🧛 Vampire Drain (Largest Outflow)',
+        title: `${topTxn.title}: ${formatINR(topTxn.amount)} (${topPct}%)`,
+        desc: `A single expense accounted for ${topPct}% of your total statement outgo! Sudden big outflows liquid emergency runway-ah drain pannirum.`
       });
     }
 
@@ -1605,22 +1657,7 @@
       }
     }
 
-    if (insights.length < 3) {
-      // Metric B: Largest Single Outflow Alert & Actionable Impact
-      const sortedByAmount = [...filteredList].sort((a, b) => b.amount - a.amount);
-      if (sortedByAmount.length > 0) {
-        const topTxn = sortedByAmount[0];
-        const topPct = totalSpent > 0 ? ((topTxn.amount / totalSpent) * 100).toFixed(0) : 0;
-        insights.push({
-          type: 'heavy_outflow',
-          icon: 'zap',
-          color: 'indigo',
-          badge: 'Largest Single Outflow',
-          title: `${topTxn.title}: ${formatINR(topTxn.amount)} (${topPct}%)`,
-          desc: `A single expense accounted for ${topPct}% of your total statement outgo. Splitting large payments or deferring non-essential purchases preserves immediate liquid runway.`
-        });
-      }
-    }
+
 
     if (insights.length < 3) {
       // Metric C: High-Volume Category Breakdown
@@ -1641,8 +1678,8 @@
       }
     }
 
-    // Render cards with click support for micro spends
-    aiGrid.innerHTML = insights.slice(0, 3).map((item, idx) => {
+    // Render cards with full-height transparent mascots & mobile optimization
+    aiGrid.innerHTML = insights.slice(0, 4).map((item, idx) => {
       const colorMap = {
         rose: { bg: 'bg-rose-500/10 border-rose-500/20 text-rose-400', badge: 'bg-rose-500/20 text-rose-300' },
         amber: { bg: 'bg-amber-500/10 border-amber-500/20 text-amber-400', badge: 'bg-amber-500/20 text-amber-300' },
@@ -1654,25 +1691,42 @@
       const isClickable = item.type === 'micro';
 
       return `
-        <div data-ai-type="${item.type}" class="p-3.5 rounded-xl bg-slate-900/60 dark:bg-slate-900/90 border ${theme.bg} backdrop-blur-sm flex flex-col justify-between space-y-2 hover:border-emerald-500/40 transition ${isClickable ? 'cursor-pointer hover:scale-[1.02] active:scale-95 shadow-md shadow-amber-500/5' : ''}">
-          <div class="space-y-1.5">
-            <div class="flex items-center justify-between">
-              <span class="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${theme.badge}">
-                ${item.badge}
-              </span>
-              <div class="flex items-center gap-1">
-                ${isClickable ? '<span class="text-[10px] text-amber-400 font-bold underline mr-1">View All &rarr;</span>' : ''}
-                <i data-lucide="${item.icon}" class="w-4 h-4 ${theme.bg.split(' ')[2]}"></i>
+        <div data-ai-type="${item.type}" class="relative overflow-hidden p-3.5 sm:p-4 rounded-2xl bg-slate-900/80 dark:bg-slate-900/95 border ${theme.bg} backdrop-blur-sm flex flex-col justify-between hover:border-emerald-500/40 transition group ${isClickable ? 'cursor-pointer hover:scale-[1.01] active:scale-[0.99] shadow-lg shadow-black/20' : ''}">
+          
+          <div class="flex items-center justify-between gap-3">
+            <!-- Left Text Content -->
+            <div class="flex-1 min-w-0 space-y-1.5">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-[9px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full ${theme.badge}">
+                  ${item.badge}
+                </span>
+                ${isClickable ? '<span class="text-[10px] text-amber-400 font-bold underline">View All &rarr;</span>' : ''}
               </div>
+              <h4 class="text-xs sm:text-sm font-bold text-white tracking-tight">
+                ${item.title}
+              </h4>
+              <p class="text-[11px] sm:text-xs text-slate-300/90 leading-relaxed pr-1 line-clamp-3 sm:line-clamp-none">
+                ${item.desc}
+              </p>
             </div>
-            <h4 class="text-xs font-bold text-slate-100 flex items-center gap-1.5">
-              <span>${item.title}</span>
-            </h4>
-            <p class="text-[11px] text-slate-300/90 leading-relaxed">${item.desc}</p>
+
+            <!-- Right Full-Height Mascot (Transparent, No White Box, Mobile-Scaled) -->
+            ${item.mascot ? `
+              <div class="shrink-0 flex items-center justify-center self-center z-10">
+                <img src="${item.mascot}" alt="${item.badge}" class="h-24 sm:h-28 md:h-32 w-auto max-w-[85px] sm:max-w-[105px] object-contain drop-shadow-2xl select-none pointer-events-none transition-transform duration-200 group-hover:scale-105 ${item.animation || 'mascot-float'}" />
+              </div>
+            ` : `
+              <div class="shrink-0">
+                <div class="w-9 h-9 rounded-xl bg-slate-800/80 flex items-center justify-center border border-slate-700/60">
+                  <i data-lucide="${item.icon}" class="w-4 h-4 ${theme.bg.split(' ')[2]}"></i>
+                </div>
+              </div>
+            `}
           </div>
+
           ${isClickable ? `
-            <div class="pt-1 border-t border-amber-500/20 flex items-center justify-between text-[10px] text-amber-300/80 font-medium">
-              <span>Tap to list all ${microItems.length} transactions</span>
+            <div class="mt-2.5 pt-2 border-t border-amber-500/20 flex items-center justify-between text-[10px] sm:text-[11px] text-amber-300 font-medium z-10">
+              <span>Tap to list all ${microItems.length} micro-spends</span>
               <span>🔍</span>
             </div>
           ` : ''}
@@ -1688,8 +1742,462 @@
       });
     }
 
+    // Update Mascot Live Mood Banner with latest insights & stats
+    updateMascotMoodBanner({
+      filteredList,
+      totalSpent,
+      microItems,
+      microSum,
+      foodItems,
+      foodSum,
+      foodPct,
+      subItems,
+      subSum,
+      topTxn,
+      topPct
+    });
+
     if (window.lucide) lucide.createIcons();
   }
+
+  // ==========================================
+  // 🎭 MASCOT LIVE MOOD BAR & WRAPPED STORIES
+  // ==========================================
+  let currentMascotStoryData = null;
+  let storyCurrentIndex = 0;
+  let storyAutoAdvanceTimer = null;
+  const STORY_DURATION_MS = 6000;
+
+  function updateMascotMoodBanner(data) {
+    currentMascotStoryData = data;
+    const banner = document.getElementById('mascotMoodBanner');
+    const mascotImg = document.getElementById('moodMascotImg');
+    const pulseDot = document.getElementById('moodPulseDot');
+    const statusBadge = document.getElementById('moodStatusBadge');
+    const leakSummary = document.getElementById('moodLeakSummary');
+    const adviceText = document.getElementById('moodAdviceText');
+
+    if (!banner || !mascotImg) return;
+
+    if (!data || !data.filteredList || data.filteredList.length === 0) {
+      mascotImg.src = 'assets/mascots/ant-mascot.png';
+      mascotImg.className = 'h-12 sm:h-14 w-auto object-contain drop-shadow-xl mascot-float select-none';
+      if (pulseDot) pulseDot.className = 'absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-slate-400 border-2 border-slate-950';
+      if (statusBadge) {
+        statusBadge.className = 'text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-500/15 text-slate-400 border border-slate-500/20';
+        statusBadge.textContent = '⚪ Ready to Track';
+      }
+      if (leakSummary) leakSummary.textContent = 'No spends recorded yet';
+      if (adviceText) adviceText.textContent = 'Add or import transactions to awaken the financial mascots!';
+      return;
+    }
+
+    const { totalSpent, microItems, microSum, foodItems, foodSum, foodPct, subItems, subSum, topTxn, topPct } = data;
+
+    const isVampireAlert = (topTxn && Number(topPct) >= 35 && totalSpent > 2000) || (monthlyBudget > 0 && totalSpent > monthlyBudget);
+    const isFoodAlert = foodPct >= 30 && foodSum >= 800;
+    const isMicroAlert = microItems.length >= 4 && microSum >= 300;
+    const isGhostAlert = subItems.length >= 2;
+
+    if (isVampireAlert && topTxn) {
+      mascotImg.src = 'assets/mascots/vampire-mascot.png';
+      mascotImg.className = 'h-12 sm:h-14 w-auto object-contain drop-shadow-xl mascot-float select-none';
+      if (pulseDot) pulseDot.className = 'absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-rose-500 animate-ping border-2 border-slate-950';
+      if (statusBadge) {
+        statusBadge.className = 'text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30';
+        statusBadge.textContent = '🔴 Vampire Drain Active';
+      }
+      if (leakSummary) leakSummary.textContent = `Biggest: ${topTxn.title} (${formatINR(topTxn.amount)})`;
+      if (adviceText) adviceText.textContent = `Vampire single swipe took ${topPct}% of your budget! Emergency runway alert.`;
+    } else if (isFoodAlert) {
+      mascotImg.src = 'assets/mascots/dino-mascot.png';
+      mascotImg.className = 'h-12 sm:h-14 w-auto object-contain drop-shadow-xl mascot-bob select-none';
+      if (pulseDot) pulseDot.className = 'absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-400 border-2 border-slate-950';
+      if (statusBadge) {
+        statusBadge.className = 'text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
+        statusBadge.textContent = '🦖 Foodie Dino Feasting!';
+      }
+      if (leakSummary) leakSummary.textContent = `${foodItems.length} Food orders (${formatINR(foodSum)})`;
+      if (adviceText) adviceText.textContent = `Swiggy & food took ${foodPct.toFixed(0)}% of your expenses. Dino stomach full, wallet light!`;
+    } else if (isMicroAlert) {
+      mascotImg.src = 'assets/mascots/ant-mascot.png';
+      mascotImg.className = 'h-12 sm:h-14 w-auto object-contain drop-shadow-xl mascot-bob select-none';
+      if (pulseDot) pulseDot.className = 'absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-amber-400 border-2 border-slate-950';
+      if (statusBadge) {
+        statusBadge.className = 'text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30';
+        statusBadge.textContent = '🐜 Sugar Ant Micro-Leak';
+      }
+      if (leakSummary) leakSummary.textContent = `${microItems.length} small spends ≤ ₹200 (${formatINR(microSum)})`;
+      if (adviceText) adviceText.textContent = `Chinna chinna tea & snack spends total ${formatINR(microSum)}. Small drops make an ocean!`;
+    } else if (isGhostAlert) {
+      mascotImg.src = 'assets/mascots/ghost-mascot.png';
+      mascotImg.className = 'h-12 sm:h-14 w-auto object-contain drop-shadow-xl mascot-float select-none';
+      if (pulseDot) pulseDot.className = 'absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-indigo-400 border-2 border-slate-950';
+      if (statusBadge) {
+        statusBadge.className = 'text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-400 border border-indigo-500/30';
+        statusBadge.textContent = '👻 Ghost Mandates Active';
+      }
+      if (leakSummary) leakSummary.textContent = `${subItems.length} recurring subs (${formatINR(subSum)})`;
+      if (adviceText) adviceText.textContent = `Autopays & recurring services active. Audit unused apps to stop silent leaks.`;
+    } else {
+      mascotImg.src = 'assets/mascots/ant-mascot.png';
+      mascotImg.className = 'h-12 sm:h-14 w-auto object-contain drop-shadow-xl mascot-float select-none';
+      if (pulseDot) pulseDot.className = 'absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-400 border-2 border-slate-950';
+      if (statusBadge) {
+        statusBadge.className = 'text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20';
+        statusBadge.textContent = '🟢 Budget Healthy';
+      }
+      if (leakSummary) leakSummary.textContent = `Mascots are chilling!`;
+      if (adviceText) adviceText.textContent = `Spends are well under control (${formatINR(totalSpent)}). Keep building wealth!`;
+    }
+  }
+
+  function openMascotStoryModal() {
+    const modal = document.getElementById('mascotWrappedModal');
+    if (!modal) return;
+    modal.classList.remove('hidden');
+    storyCurrentIndex = 0;
+    renderStorySlide(storyCurrentIndex);
+  }
+
+  function closeMascotStoryModal() {
+    const modal = document.getElementById('mascotWrappedModal');
+    if (modal) modal.classList.add('hidden');
+    if (storyAutoAdvanceTimer) {
+      clearTimeout(storyAutoAdvanceTimer);
+      storyAutoAdvanceTimer = null;
+    }
+  }
+
+  function renderStorySlide(idx) {
+    if (storyAutoAdvanceTimer) {
+      clearTimeout(storyAutoAdvanceTimer);
+      storyAutoAdvanceTimer = null;
+    }
+
+    const totalSlides = 5;
+    if (idx < 0) idx = 0;
+    if (idx >= totalSlides) {
+      closeMascotStoryModal();
+      return;
+    }
+    storyCurrentIndex = idx;
+
+    // Update progress bars
+    for (let i = 0; i < totalSlides; i++) {
+      const bar = document.getElementById(`storyBar${i}`);
+      if (bar) {
+        bar.style.transition = 'none';
+        if (i < idx) {
+          bar.style.width = '100%';
+        } else if (i === idx) {
+          bar.style.width = '0%';
+          setTimeout(() => {
+            bar.style.transition = `width ${STORY_DURATION_MS}ms linear`;
+            bar.style.width = '100%';
+          }, 30);
+        } else {
+          bar.style.width = '0%';
+        }
+      }
+    }
+
+    // Update slide number & buttons
+    const slideNumberEl = document.getElementById('storySlideNumber');
+    if (slideNumberEl) slideNumberEl.textContent = `${idx + 1} / ${totalSlides}`;
+
+    const prevBtn = document.getElementById('prevStorySlideBtn');
+    if (prevBtn) {
+      prevBtn.disabled = idx === 0;
+      prevBtn.style.opacity = idx === 0 ? '0.4' : '1';
+      prevBtn.style.cursor = idx === 0 ? 'not-allowed' : 'pointer';
+    }
+
+    const nextBtn = document.getElementById('nextStorySlideBtn');
+    if (nextBtn) {
+      if (idx === totalSlides - 1) {
+        nextBtn.innerHTML = `Done ✓`;
+        nextBtn.className = 'px-5 py-2 rounded-xl text-xs font-bold bg-emerald-500 hover:bg-emerald-600 text-slate-950 shadow-md shadow-emerald-500/20 transition active:scale-95';
+      } else {
+        nextBtn.innerHTML = `Next &rarr;`;
+        nextBtn.className = 'px-5 py-2 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-600 text-slate-950 shadow-md shadow-amber-500/20 transition active:scale-95';
+      }
+    }
+
+    const tagEl = document.getElementById('storySlideTag');
+    const bodyEl = document.getElementById('storySlideBody');
+    if (!bodyEl) return;
+
+    const data = currentMascotStoryData || {
+      filteredList: (expenses || []),
+      totalSpent: (expenses || []).reduce((a, b) => a + (b.amount || 0), 0),
+      microItems: (expenses || []).filter(e => e.amount <= 200 && e.amount > 0),
+      microSum: (expenses || []).filter(e => e.amount <= 200 && e.amount > 0).reduce((s, e) => s + e.amount, 0),
+      foodItems: (expenses || []).filter(e => e.category === 'Food & Dining' || /swiggy|zomato|kfc|mcdonald|domino|pizza|burger|eats|hotel|bhavan|bakery|canteen|food/i.test(e.title || '')),
+      foodSum: 0,
+      foodPct: 0,
+      subItems: [],
+      subSum: 0,
+      topTxn: null,
+      topPct: 0
+    };
+
+    const { filteredList, totalSpent, microItems, microSum, foodItems, foodSum, foodPct, subItems, subSum, topTxn, topPct } = data;
+
+    if (idx === 0) {
+      if (tagEl) tagEl.textContent = 'CHAPTER 1: SPENDING OVERVIEW';
+      const activeDays = Math.max(1, new Set(filteredList.filter(e => e.date).map(e => e.date)).size);
+      const avgPerTxn = filteredList.length > 0 ? (totalSpent / filteredList.length) : 0;
+      bodyEl.innerHTML = `
+        <div class="relative py-2">
+          <div class="absolute inset-0 bg-amber-500/10 rounded-full blur-2xl"></div>
+          <img src="assets/mascots/ant-mascot.png" class="h-32 sm:h-36 w-auto object-contain drop-shadow-2xl mascot-float relative z-10 mx-auto select-none" />
+        </div>
+        <div class="space-y-2">
+          <span class="text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/20">
+            Statement Atmosphere
+          </span>
+          <h3 class="text-2xl sm:text-3xl font-black text-white tracking-tight font-mono">
+            ${formatINR(totalSpent)}
+          </h3>
+          <p class="text-xs sm:text-sm text-slate-300 max-w-xs mx-auto leading-relaxed">
+            Across <strong class="text-white">${filteredList.length} transactions</strong> recorded in this period.
+          </p>
+        </div>
+        <div class="w-full bg-slate-800/60 rounded-2xl p-3.5 border border-slate-700/60 text-left text-xs space-y-2 mt-2">
+          <div class="flex justify-between items-center text-slate-300">
+            <span class="flex items-center gap-1.5"><i data-lucide="calendar" class="w-3.5 h-3.5 text-amber-400"></i> Active Days:</span>
+            <span class="text-white font-bold font-mono">${activeDays} days</span>
+          </div>
+          <div class="flex justify-between items-center text-slate-300">
+            <span class="flex items-center gap-1.5"><i data-lucide="calculator" class="w-3.5 h-3.5 text-emerald-400"></i> Avg Spend / Txn:</span>
+            <span class="text-white font-bold font-mono">${formatINR(avgPerTxn)}</span>
+          </div>
+          <div class="flex justify-between items-center text-slate-300">
+            <span class="flex items-center gap-1.5"><i data-lucide="shield" class="w-3.5 h-3.5 text-indigo-400"></i> Monthly Budget:</span>
+            <span class="text-white font-bold font-mono">${monthlyBudget > 0 ? formatINR(monthlyBudget) : 'Not set'}</span>
+          </div>
+        </div>
+      `;
+    } else if (idx === 1) {
+      if (tagEl) tagEl.textContent = 'CHAPTER 2: SUGAR ANT LEAK';
+      bodyEl.innerHTML = `
+        <div class="relative py-2">
+          <div class="absolute inset-0 bg-amber-500/15 rounded-full blur-2xl"></div>
+          <img src="assets/mascots/ant-mascot.png" class="h-32 sm:h-36 w-auto object-contain drop-shadow-2xl mascot-bob relative z-10 mx-auto select-none" />
+        </div>
+        <div class="space-y-2">
+          <span class="text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/20">
+            🐜 Micro-Purchases (≤ ₹200)
+          </span>
+          <h3 class="text-2xl sm:text-3xl font-black text-amber-400 tracking-tight font-mono">
+            ${formatINR(microSum)}
+          </h3>
+          <p class="text-xs sm:text-sm text-slate-300 max-w-xs mx-auto leading-relaxed">
+            You made <strong class="text-amber-300">${microItems.length} small quick swipes</strong>. Chinna chinna tea, coffee & snacks serndhu silent-aa wallet-ah drain panniduchu!
+          </p>
+        </div>
+        <div class="w-full bg-amber-500/10 rounded-2xl p-3.5 border border-amber-500/20 text-left text-xs space-y-1.5 text-amber-200">
+          <div class="font-bold flex items-center gap-1.5 text-amber-300">
+            <span>💡 Ant's Wealth Rule:</span>
+          </div>
+          <p class="text-[11px] leading-relaxed text-amber-100/90">
+            "A small leak will sink a great ship." Cutting just 2 micro expenses daily saves up to <strong class="text-white">${formatINR(2000)}/month</strong>!
+          </p>
+        </div>
+      `;
+    } else if (idx === 2) {
+      if (tagEl) tagEl.textContent = 'CHAPTER 3: FOODIE DINO HUNT';
+      bodyEl.innerHTML = `
+        <div class="relative py-2">
+          <div class="absolute inset-0 bg-emerald-500/15 rounded-full blur-2xl"></div>
+          <img src="assets/mascots/dino-mascot.png" class="h-32 sm:h-36 w-auto object-contain drop-shadow-2xl mascot-bob relative z-10 mx-auto select-none" />
+        </div>
+        <div class="space-y-2">
+          <span class="text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/20">
+            🦖 Dining & Food Monster
+          </span>
+          <h3 class="text-2xl sm:text-3xl font-black text-emerald-400 tracking-tight font-mono">
+            ${formatINR(foodSum)} <span class="text-sm text-slate-300 font-sans font-semibold">(${foodPct.toFixed(0)}%)</span>
+          </h3>
+          <p class="text-xs sm:text-sm text-slate-300 max-w-xs mx-auto leading-relaxed">
+            Food deliveries, Swiggy, Zomato & dining took <strong class="text-emerald-300">${foodItems.length} orders</strong>. Dino tummy is full!
+          </p>
+        </div>
+        <div class="w-full bg-emerald-500/10 rounded-2xl p-3.5 border border-emerald-500/20 text-left text-xs space-y-1.5 text-emerald-200">
+          <div class="font-bold flex items-center gap-1.5 text-emerald-300">
+            <span>🍔 Dino's Money Hack:</span>
+          </div>
+          <p class="text-[11px] leading-relaxed text-emerald-100/90">
+            Limit delivery app orders to weekends only. Preparing quick meals during weekdays protects your emergency savings runway!
+          </p>
+        </div>
+      `;
+    } else if (idx === 3) {
+      if (tagEl) tagEl.textContent = 'CHAPTER 4: VAMPIRE & PHANTOM DRAINS';
+      bodyEl.innerHTML = `
+        <div class="flex items-center justify-center gap-4 py-2">
+          <div class="relative">
+            <img src="assets/mascots/vampire-mascot.png" class="h-28 sm:h-32 w-auto object-contain drop-shadow-2xl mascot-float select-none" />
+          </div>
+          <div class="relative">
+            <img src="assets/mascots/ghost-mascot.png" class="h-28 sm:h-32 w-auto object-contain drop-shadow-2xl mascot-float select-none" />
+          </div>
+        </div>
+        <div class="space-y-2">
+          <span class="text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full bg-rose-500/15 text-rose-300 border border-rose-500/20">
+            🧛 Vampire Spike & 👻 Ghost Subs
+          </span>
+          <h3 class="text-xl sm:text-2xl font-black text-rose-400 tracking-tight font-mono">
+            ${topTxn ? `${formatINR(topTxn.amount)} (${topPct}%)` : 'No Big Spikes'}
+          </h3>
+          <p class="text-xs sm:text-sm text-slate-300 max-w-xs mx-auto leading-relaxed">
+            ${topTxn ? `Top single outflow: <strong class="text-white">${topTxn.title}</strong> swallowed ${topPct}% of your funds!` : 'Spends were well dispersed across merchants.'}
+            ${subItems.length > 0 ? `<br/><span class="text-indigo-300 mt-1 inline-block">👻 Ghost Mandates: ${subItems.length} recurring subs (${formatINR(subSum)}).</span>` : ''}
+          </p>
+        </div>
+        <div class="w-full bg-rose-500/10 rounded-2xl p-3.5 border border-rose-500/20 text-left text-xs space-y-1.5 text-rose-200">
+          <div class="font-bold flex items-center gap-1.5 text-rose-300">
+            <span>🛡️ Vampire Defense Shield:</span>
+          </div>
+          <p class="text-[11px] leading-relaxed text-rose-100/90">
+            Before any transaction over ₹3,000, enforce the 24-hour cooling-off rule. Cancel unused OTT/gym auto-debits regularly!
+          </p>
+        </div>
+      `;
+    } else if (idx === 4) {
+      if (tagEl) tagEl.textContent = 'FINAL REPORT: MASCOT SCORECARD';
+      let scoreGrade = 'A+';
+      let scoreBadge = 'Budget Master 👑';
+      let scoreVerdict = 'Brilliant discipline! All four financial mascots are happy and your runway is strong.';
+
+      if (foodPct >= 40 || microItems.length >= 10 || (topTxn && Number(topPct) >= 50)) {
+        scoreGrade = 'C+';
+        scoreBadge = 'High Leak Alert ⚠️';
+        scoreVerdict = 'Mascots had a wild feast! Review food deliveries and small swipe leaks to get back on track.';
+      } else if (foodPct >= 28 || microItems.length >= 6 || (topTxn && Number(topPct) >= 35)) {
+        scoreGrade = 'B+';
+        scoreBadge = 'Steady Saver 🌿';
+        scoreVerdict = 'Good spending discipline overall with a few micro leaks. You are in good control!';
+      }
+
+      bodyEl.innerHTML = `
+        <div class="grid grid-cols-4 gap-2 w-full max-w-xs mx-auto py-1">
+          <div class="p-2 bg-amber-500/10 rounded-2xl border border-amber-500/20 flex flex-col items-center">
+            <img src="assets/mascots/ant-mascot.png" class="h-10 sm:h-12 w-auto object-contain select-none" />
+            <span class="text-[9px] font-bold text-amber-300 mt-1">Ant</span>
+            <span class="text-[11px] font-extrabold text-white">${microItems.length <= 5 ? 'A+' : 'B'}</span>
+          </div>
+          <div class="p-2 bg-emerald-500/10 rounded-2xl border border-emerald-500/20 flex flex-col items-center">
+            <img src="assets/mascots/dino-mascot.png" class="h-10 sm:h-12 w-auto object-contain select-none" />
+            <span class="text-[9px] font-bold text-emerald-300 mt-1">Dino</span>
+            <span class="text-[11px] font-extrabold text-white">${foodPct <= 30 ? 'A' : 'C+'}</span>
+          </div>
+          <div class="p-2 bg-indigo-500/10 rounded-2xl border border-indigo-500/20 flex flex-col items-center">
+            <img src="assets/mascots/ghost-mascot.png" class="h-10 sm:h-12 w-auto object-contain select-none" />
+            <span class="text-[9px] font-bold text-indigo-300 mt-1">Ghost</span>
+            <span class="text-[11px] font-extrabold text-white">${subItems.length <= 2 ? 'A+' : 'B'}</span>
+          </div>
+          <div class="p-2 bg-rose-500/10 rounded-2xl border border-rose-500/20 flex flex-col items-center">
+            <img src="assets/mascots/vampire-mascot.png" class="h-10 sm:h-12 w-auto object-contain select-none" />
+            <span class="text-[9px] font-bold text-rose-300 mt-1">Vampire</span>
+            <span class="text-[11px] font-extrabold text-white">${Number(topPct) <= 30 ? 'A' : 'B-'}</span>
+          </div>
+        </div>
+
+        <div class="space-y-1.5 my-1">
+          <span class="text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+            ${scoreBadge}
+          </span>
+          <h3 class="text-3xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-emerald-400 to-rose-400">
+            Grade ${scoreGrade}
+          </h3>
+          <p class="text-xs text-slate-300 max-w-xs mx-auto leading-relaxed">
+            ${scoreVerdict}
+          </p>
+        </div>
+
+        <button id="finishStoryBtn" type="button" class="w-full py-3 rounded-2xl text-xs font-bold bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-slate-950 shadow-xl shadow-emerald-500/20 active:scale-95 transition">
+          🎉 Awesome! Back to Dashboard
+        </button>
+      `;
+
+      const finishBtn = document.getElementById('finishStoryBtn');
+      if (finishBtn) finishBtn.addEventListener('click', closeMascotStoryModal);
+    }
+
+    if (window.lucide) lucide.createIcons();
+
+    // Auto-advance to next slide after duration
+    storyAutoAdvanceTimer = setTimeout(() => {
+      if (idx < totalSlides - 1) {
+        renderStorySlide(idx + 1);
+      } else {
+        closeMascotStoryModal();
+      }
+    }, STORY_DURATION_MS);
+  }
+
+  // Mascot Story Listeners
+  const openStoryBtn = document.getElementById('openMascotStoryBtn');
+  if (openStoryBtn) openStoryBtn.addEventListener('click', openMascotStoryModal);
+
+  const closeStoryBtn = document.getElementById('closeStoryModalBtn');
+  if (closeStoryBtn) closeStoryBtn.addEventListener('click', closeMascotStoryModal);
+
+  const prevStoryBtn = document.getElementById('prevStorySlideBtn');
+  if (prevStoryBtn) {
+    prevStoryBtn.addEventListener('click', () => {
+      renderStorySlide(storyCurrentIndex - 1);
+    });
+  }
+
+  const nextStoryBtn = document.getElementById('nextStorySlideBtn');
+  if (nextStoryBtn) {
+    nextStoryBtn.addEventListener('click', () => {
+      if (storyCurrentIndex === 4) {
+        closeMascotStoryModal();
+      } else {
+        renderStorySlide(storyCurrentIndex + 1);
+      }
+    });
+  }
+
+  const wrappedModal = document.getElementById('mascotWrappedModal');
+  if (wrappedModal) {
+    wrappedModal.addEventListener('click', (e) => {
+      if (e.target === wrappedModal) closeMascotStoryModal();
+    });
+  }
+
+  const storyBodyEl = document.getElementById('storySlideBody');
+  if (storyBodyEl) {
+    storyBodyEl.addEventListener('click', (e) => {
+      if (e.target.closest('button')) return;
+      const rect = storyBodyEl.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      if (clickX < rect.width * 0.35) {
+        renderStorySlide(storyCurrentIndex - 1);
+      } else {
+        if (storyCurrentIndex === 4) {
+          closeMascotStoryModal();
+        } else {
+          renderStorySlide(storyCurrentIndex + 1);
+        }
+      }
+    });
+  }
+
+  document.addEventListener('keydown', (e) => {
+    const modal = document.getElementById('mascotWrappedModal');
+    if (!modal || modal.classList.contains('hidden')) return;
+    if (e.key === 'Escape') closeMascotStoryModal();
+    if (e.key === 'ArrowRight') {
+      if (storyCurrentIndex === 4) closeMascotStoryModal();
+      else renderStorySlide(storyCurrentIndex + 1);
+    }
+    if (e.key === 'ArrowLeft') renderStorySlide(storyCurrentIndex - 1);
+  });
 
   // --- Micro-Purchases Breakdown Modal Logic ---
   const microPurchasesModal = document.getElementById('microPurchasesModal');
@@ -2529,6 +3037,35 @@
     return 'UPI';
   }
 
+  // Expand common bank character-limit truncated words and clean terminal IDs
+  function normalizeMerchantName(text) {
+    if (!text) return text;
+    let clean = text.trim();
+
+    // Strip leading store / terminal codes e.g. "18457 APOLLO" -> "APOLLO"
+    clean = clean.replace(/^\d{4,8}\s+/g, '');
+
+    // Expand truncated words common in bank statements (due to 20-30 char limit)
+    const expansions = [
+      [/\bPHARMAC\b/i, 'PHARMACY'],
+      [/\bSUPER\s+MARKE\b/i, 'SUPER MARKET'],
+      [/\bENTERPRIS\b/i, 'ENTERPRISES'],
+      [/\bTICKETIN\b/i, 'TICKETING'],
+      [/\bCOMMUNICAT\b/i, 'COMMUNICATIONS'],
+      [/\bTECHNOLOGI\b/i, 'TECHNOLOGIES'],
+      [/\bPETROLEU\b/i, 'PETROLEUM'],
+      [/\bHEALTHCAR\b/i, 'HEALTHCARE'],
+      [/\bRESTAURAN\b/i, 'RESTAURANT'],
+      [/\bIYANKAR\b/i, 'IYENGAR'],
+      [/\bFABRICS\s+PRIVATE\b/i, 'FABRICS PVT LTD'],
+      [/\bPROVISIO\b/i, 'PROVISIONS']
+    ];
+    for (const [regex, replacement] of expansions) {
+      clean = clean.replace(regex, replacement);
+    }
+    return clean.trim();
+  }
+
   // Clean raw bank narration into a readable merchant title
   function cleanMerchantTitle(narration) {
     if (!narration) return 'Expense';
@@ -2547,7 +3084,7 @@
            .replace(/\s+Paid\s+by\s*.*$/i, '')
            .trim();
       if (s.length >= 2) {
-        return s.length > 35 ? s.substring(0, 35) : s;
+        return normalizeMerchantName(s.length > 50 ? s.substring(0, 50) : s);
       }
     }
 
@@ -2567,7 +3104,7 @@
       }
 
       if (candidate.length >= 2 && !/^\d+$/.test(candidate)) {
-        return candidate.length > 35 ? candidate.substring(0, 35) : candidate;
+        return normalizeMerchantName(candidate.length > 50 ? candidate.substring(0, 50) : candidate);
       } else if (candidate.length >= 2) {
         return 'UPI Ref ' + candidate;
       }
@@ -2583,7 +3120,7 @@
     if (sbiMatch && sbiMatch[1]) {
       let name = sbiMatch[1].trim();
       if (name.length >= 3) {
-        return name.length > 35 ? name.substring(0, 35) : name;
+        return normalizeMerchantName(name.length > 50 ? name.substring(0, 50) : name);
       }
     }
 
@@ -2592,14 +3129,14 @@
     if (upiMatch && upiMatch[1]) {
       let candidate = upiMatch[1].trim();
       if (candidate.length > 2 && !/^\d+$/.test(candidate) && !/^(DR|CR)$/i.test(candidate)) {
-        return candidate.length > 35 ? candidate.substring(0, 35) : candidate;
+        return normalizeMerchantName(candidate.length > 50 ? candidate.substring(0, 50) : candidate);
       }
     }
 
     // POS e.g. "POS 4012XXXXXXXX1234 RELIANCE RETAIL"
     const posMatch = s.match(/POS\s+[X0-9]+\s+([A-Za-z0-9\s&._-]+)/i);
     if (posMatch && posMatch[1]) {
-      return posMatch[1].trim();
+      return normalizeMerchantName(posMatch[1].trim());
     }
 
     // ATM / Bank Charges
@@ -2620,7 +3157,8 @@
          .replace(/\s+/g, ' ')
          .trim();
 
-    return s.length >= 2 ? (s.length > 35 ? s.substring(0, 35) : s) : narration.substring(0, 35);
+    const result = s.length >= 2 ? (s.length > 50 ? s.substring(0, 50) : s) : narration.substring(0, 50);
+    return normalizeMerchantName(result);
   }
 
   // Parse Indian Date Formats (DD/MM/YYYY, DD-MM-YYYY, YYYY-MM-DD, DD-MMM-YY, etc.)

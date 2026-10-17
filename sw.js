@@ -1,5 +1,5 @@
 // Finly Service Worker
-const CACHE_NAME = 'finly-v49';
+const CACHE_NAME = 'finly-v54';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -11,7 +11,11 @@ const ASSETS_TO_CACHE = [
   './logo.png',
   './icon-192.png',
   './icon-512.png',
-  './apple-touch-icon.png'
+  './apple-touch-icon.png',
+  './assets/mascots/ant-mascot.png',
+  './assets/mascots/dino-mascot.png',
+  './assets/mascots/ghost-mascot.png',
+  './assets/mascots/vampire-mascot.png'
 ];
 
 self.addEventListener('install', (event) => {

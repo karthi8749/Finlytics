@@ -78,6 +78,29 @@
       font-family: 'Sora', sans-serif;
       font-weight: 600;
     }
+    /* 3D Mascot Floating & Idle Animations */
+    @keyframes mascotFloat {
+      0%, 100% { transform: translateY(0px) rotate(0deg); }
+      50% { transform: translateY(-7px) rotate(1.5deg); }
+    }
+    @keyframes mascotBob {
+      0%, 100% { transform: translateY(0px) scale(1); }
+      50% { transform: translateY(-4px) scale(1.02); }
+    }
+    @keyframes mascotPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.04); }
+    }
+    .mascot-float {
+      animation: mascotFloat 3.6s ease-in-out infinite;
+    }
+    .mascot-bob {
+      animation: mascotBob 2.6s ease-in-out infinite;
+    }
+    .mascot-pulse {
+      animation: mascotPulse 3.8s ease-in-out infinite;
+    }
+
     /* Custom Scrollbar */
     ::-webkit-scrollbar {
       width: 6px;
@@ -252,6 +275,34 @@
 
   <!-- Main Container (Full Width - Zero Wasted Space) -->
   <main class="w-full max-w-full px-3 sm:px-6 lg:px-8 py-3 sm:py-5 space-y-4 sm:space-y-6 overflow-x-hidden pb-24 sm:pb-6">
+
+    <!-- 🎭 Mascot Live Mood Bar & Spotify Wrapped Launcher -->
+    <div id="mascotMoodBanner" class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-slate-900/95 to-slate-950 border border-slate-800 p-3 sm:p-4 shadow-xl transition-all">
+      <div class="flex items-center justify-between gap-3 flex-wrap sm:flex-nowrap">
+        
+        <!-- Mascot Avatar & Mood Status -->
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="relative shrink-0">
+            <img id="moodMascotImg" src="assets/mascots/ant-mascot.png" alt="Mood Mascot" class="h-12 sm:h-14 w-auto object-contain drop-shadow-xl mascot-float select-none" />
+            <span id="moodPulseDot" class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-400 border-2 border-slate-950"></span>
+          </div>
+          <div class="min-w-0">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span id="moodStatusBadge" class="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
+                🟢 Budget Healthy
+              </span>
+              <span id="moodLeakSummary" class="text-[11px] text-slate-400 font-medium truncate">
+                Mascots are chilling!
+              </span>
+            </div>
+            <p id="moodAdviceText" class="text-xs sm:text-sm font-semibold text-white tracking-tight mt-0.5 truncate sm:whitespace-normal">
+              Spends are well under budget control. Keep it up!
+            </p>
+          </div>
+        </div>
+
+      </div>
+    </div>
 
     <!-- Section 1: KPI Cards -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -514,14 +565,14 @@
     <div class="bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-4 sm:p-5 shadow-sm space-y-4">
       <!-- Header & Live Leak Stats -->
       <div class="flex items-center justify-between flex-wrap gap-2 pb-3 border-b border-slate-100 dark:border-slate-800/80">
-        <div class="flex items-center gap-2.5 min-w-0">
-          <div class="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-500 flex items-center justify-center shrink-0">
-            <i data-lucide="pie-chart" class="w-4 h-4"></i>
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="w-12 h-12 flex items-center justify-center shrink-0">
+            <img src="assets/mascots/ant-mascot.png" alt="Sugar Ant Mascot" class="h-12 w-auto object-contain drop-shadow-md select-none" />
           </div>
           <div class="min-w-0">
             <h2 class="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-slate-100 flex items-center gap-2 flex-wrap">
               <span>Small Purchases Leak</span>
-              <span class="text-[9px] uppercase px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-500 dark:text-amber-400 font-extrabold border border-amber-500/20">≤ ₹200 Spends</span>
+              <span class="text-[9px] uppercase px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-500 dark:text-amber-400 font-extrabold border border-amber-500/20">Sugar Ant Alert ≤ ₹200</span>
             </h2>
             <p class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Click any slice or merchant below to view its full expense list</p>
           </div>
@@ -560,11 +611,13 @@
       </div>
 
       <!-- Micro-Advice Tanglish Banner -->
-      <div id="smallLeakSummaryNote" class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-900 dark:text-amber-200/90 flex items-start gap-2.5">
-        <i data-lucide="info" class="w-4 h-4 text-amber-500 shrink-0 mt-0.5"></i>
-        <div id="smallLeakSummaryText" class="text-[11px] sm:text-xs text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
-          Analyzing micro-transactions...
+      <div id="smallLeakSummaryNote" class="p-3 sm:p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-900 dark:text-amber-200/90 flex items-center justify-between gap-3 overflow-hidden">
+        <div class="flex-1 min-w-0">
+          <div id="smallLeakSummaryText" class="text-[11px] sm:text-xs text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
+            Analyzing micro-transactions...
+          </div>
         </div>
+        <img src="assets/mascots/ant-mascot.png" alt="Sugar Ant Mascot" class="h-16 sm:h-20 w-auto object-contain shrink-0 drop-shadow-xl -my-2 select-none mascot-bob" />
       </div>
     </div>
 
@@ -586,7 +639,7 @@
       </div>
 
       <!-- Generated Insights Cards Grid -->
-      <div id="aiInsightsGrid" class="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div id="aiInsightsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <!-- Dynamically generated AI cards -->
       </div>
     </div>
@@ -1074,9 +1127,9 @@
     <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-lg p-5 sm:p-6 shadow-2xl relative max-h-[85vh] flex flex-col animate-in fade-in zoom-in-95 duration-150">
       
       <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 shrink-0">
-        <div class="flex items-center gap-2.5">
-          <div class="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center shrink-0">
-            <i data-lucide="coffee" class="w-4 h-4"></i>
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 flex items-center justify-center shrink-0">
+            <img src="assets/mascots/ant-mascot.png" alt="Ant Mascot" class="h-12 w-auto object-contain drop-shadow-md select-none" />
           </div>
           <div>
             <h3 class="text-sm sm:text-base font-bold text-slate-900 dark:text-white" id="microModalTitle">Micro-Purchases Breakdown</h3>
@@ -1149,10 +1202,53 @@
         <button type="button" id="doneTxnModalBtn" class="px-5 py-2 rounded-xl text-xs font-bold bg-emerald-500 hover:bg-emerald-600 text-slate-950 transition shadow-lg shadow-emerald-500/20 active:scale-95">Close</button>
       </div>
     </div>
+  <!-- Modal: Mascot Wrapped Story (Spotify / Instagram Carousel Style) -->
+  <div id="mascotWrappedModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-3 sm:p-4">
+    <div class="relative w-full max-w-md bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 border border-slate-700/80 rounded-3xl p-5 sm:p-6 shadow-2xl flex flex-col justify-between overflow-hidden min-h-[530px] max-h-[92vh] animate-in fade-in zoom-in-95 duration-200">
+      
+      <!-- Top Story Bars (5 Segments) -->
+      <div class="space-y-3 shrink-0">
+        <div class="flex items-center gap-1.5 w-full" id="storyProgressBars">
+          <div class="flex-1 h-1 bg-slate-700 rounded-full overflow-hidden"><div class="h-full bg-amber-400 w-0 transition-all duration-300" id="storyBar0"></div></div>
+          <div class="flex-1 h-1 bg-slate-700 rounded-full overflow-hidden"><div class="h-full bg-emerald-400 w-0 transition-all duration-300" id="storyBar1"></div></div>
+          <div class="flex-1 h-1 bg-slate-700 rounded-full overflow-hidden"><div class="h-full bg-indigo-400 w-0 transition-all duration-300" id="storyBar2"></div></div>
+          <div class="flex-1 h-1 bg-slate-700 rounded-full overflow-hidden"><div class="h-full bg-rose-400 w-0 transition-all duration-300" id="storyBar3"></div></div>
+          <div class="flex-1 h-1 bg-slate-700 rounded-full overflow-hidden"><div class="h-full bg-amber-400 w-0 transition-all duration-300" id="storyBar4"></div></div>
+        </div>
+
+        <!-- Story Top Header -->
+        <div class="flex items-center justify-between text-xs text-slate-400">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+            <span class="font-bold text-slate-200 tracking-wider uppercase text-[10px]" id="storySlideTag">SPENDING STORY</span>
+          </div>
+          <button id="closeStoryModalBtn" class="p-1 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Story Dynamic Slide Content -->
+      <div id="storySlideBody" class="my-auto py-5 flex flex-col items-center text-center space-y-4">
+        <!-- Injected via JS -->
+      </div>
+
+      <!-- Story Bottom Navigation Controls -->
+      <div class="flex items-center justify-between gap-3 pt-3 border-t border-slate-800 shrink-0">
+        <button id="prevStorySlideBtn" type="button" class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-800/80 hover:bg-slate-700 text-slate-300 transition">
+          &larr; Prev
+        </button>
+        <span class="text-xs text-slate-400 mono font-semibold" id="storySlideNumber">1 / 5</span>
+        <button id="nextStorySlideBtn" type="button" class="px-5 py-2 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-600 text-slate-950 shadow-md shadow-amber-500/20 transition active:scale-95">
+          Next &rarr;
+        </button>
+      </div>
+
+    </div>
   </div>
 
   <!-- App Logic -->
-  <script src="app.js"></script>
+  <script src="app.js?v=54"></script>
 </body>
 </html>
 
