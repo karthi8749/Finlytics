@@ -1,5 +1,5 @@
 // Finly Service Worker
-const CACHE_NAME = 'finly-v55';
+const CACHE_NAME = 'finly-v56';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',

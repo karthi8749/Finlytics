@@ -276,8 +276,8 @@
   <!-- Main Container (Full Width - Zero Wasted Space) -->
   <main class="w-full max-w-full px-3 sm:px-6 lg:px-8 py-3 sm:py-5 space-y-4 sm:space-y-6 overflow-x-hidden pb-24 sm:pb-6">
 
-    <!-- 🎭 Mascot Live Mood Bar & Spotify Wrapped Launcher -->
-    <div id="mascotMoodBanner" class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-slate-900/95 to-slate-950 border border-slate-800 p-3 sm:p-4 shadow-xl transition-all">
+    <!-- 🎭 Mascot Live Mood Bar & Interactive Leak Viewer -->
+    <div id="mascotMoodBanner" class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-slate-900/95 to-slate-950 border border-slate-800 hover:border-slate-700 p-3 sm:p-4 shadow-xl transition-all cursor-pointer active:scale-[0.99] group" title="Click to view transactions">
       <div class="flex items-center justify-between gap-3 flex-wrap sm:flex-nowrap">
         
         <!-- Mascot Avatar & Mood Status -->
@@ -304,23 +304,33 @@
           </div>
         </div>
 
+        <!-- Right: View transactions hint button -->
+        <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/80 border border-slate-700/60 text-xs font-semibold text-slate-300 group-hover:text-emerald-400 group-hover:border-emerald-500/40 transition shrink-0">
+          <span>View Txns</span>
+          <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+        </div>
+
       </div>
     </div>
 
     <!-- Section 1: KPI Cards -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
       <!-- Card 1: Total Spent with MoM Growth Badge -->
-      <div class="bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-4 sm:p-5 relative overflow-hidden shadow-sm">
+      <div id="kpiTotalSpentCard" class="bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800/80 hover:border-emerald-500/50 rounded-2xl p-4 sm:p-5 relative overflow-hidden shadow-sm cursor-pointer active:scale-[0.99] transition group" title="Click to view all period transactions">
         <div class="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs font-semibold mb-2">
-          <span>Total Spent</span>
+          <span class="group-hover:text-emerald-500 transition">Total Spent</span>
           <span id="kpiMomBadge" class="hidden text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400">MoM 0%</span>
         </div>
-        <div class="text-xl sm:text-2xl lg:text-3xl font-extrabold mono text-slate-900 dark:text-white" id="kpiTotalSpent">
+        <div class="text-xl sm:text-2xl lg:text-3xl font-extrabold mono text-slate-900 dark:text-white group-hover:text-emerald-400 transition" id="kpiTotalSpent">
           ₹0.00
         </div>
         <div class="text-[11px] text-slate-400 mt-1 flex items-center justify-between" id="kpiExpenseCount">
           <span>0 transactions</span>
           <span id="kpiMomComparisonText" class="text-[10px] font-medium text-slate-400">vs prev month</span>
+        </div>
+        <div class="mt-2 pt-1 border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between text-[10px] text-slate-400 group-hover:text-emerald-400 transition font-medium">
+          <span>Tap to view transactions</span>
+          <span>&rarr;</span>
         </div>
       </div>
 
@@ -404,34 +414,42 @@
             </div>
           </div>
 
-          <!-- #1 Top Category -->
-          <div class="flex items-center gap-1.5 min-w-0">
-            <span id="topCat1Dot" class="w-2 h-2 rounded-full bg-emerald-400 shrink-0"></span>
-            <span class="text-sm sm:text-lg font-bold text-slate-900 dark:text-white truncate" id="kpiTopCategory">
-              None
-            </span>
-          </div>
-          <div class="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold mt-0.5 truncate pl-3.5" id="kpiTopCategoryAmount">
-            ₹0.00 (0%)
-          </div>
+          <!-- #1 Top Category (Clickable) -->
+          <div id="kpiTopCategoryCard" class="cursor-pointer group p-1 -m-1 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition" title="Click to view #1 category transactions">
+            <div class="flex items-center justify-between gap-1">
+              <div class="flex items-center gap-1.5 min-w-0">
+                <span id="topCat1Dot" class="w-2 h-2 rounded-full bg-emerald-400 shrink-0"></span>
+                <span class="text-sm sm:text-lg font-bold text-slate-900 dark:text-white group-hover:text-emerald-400 transition truncate" id="kpiTopCategory">
+                  None
+                </span>
+              </div>
+              <span class="text-[9px] text-emerald-500 dark:text-emerald-400 opacity-0 group-hover:opacity-100 transition shrink-0">&rarr;</span>
+            </div>
+            <div class="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold mt-0.5 truncate pl-3.5" id="kpiTopCategoryAmount">
+              ₹0.00 (0%)
+            </div>
 
-          <!-- Top 2 Categories Split Bar with Glow -->
-          <div class="w-full bg-slate-200/80 dark:bg-slate-800/80 h-1.5 rounded-full mt-2.5 flex overflow-hidden">
-            <div id="topCat1Bar" class="h-full bg-emerald-500 transition-all duration-500" style="width: 0%;"></div>
-            <div id="topCat2Bar" class="h-full bg-cyan-500 transition-all duration-500" style="width: 0%;"></div>
+            <!-- Top 2 Categories Split Bar with Glow -->
+            <div class="w-full bg-slate-200/80 dark:bg-slate-800/80 h-1.5 rounded-full mt-2.5 flex overflow-hidden">
+              <div id="topCat1Bar" class="h-full bg-emerald-500 transition-all duration-500" style="width: 0%;"></div>
+              <div id="topCat2Bar" class="h-full bg-cyan-500 transition-all duration-500" style="width: 0%;"></div>
+            </div>
           </div>
         </div>
 
-        <!-- #2 Runner-Up Category & Combined Share -->
+        <!-- #2 Runner-Up Category & Combined Share (Clickable) -->
         <div class="text-[10px] text-slate-400 mt-2 pt-2 border-t border-slate-100 dark:border-slate-800/80 space-y-0.5">
           <!-- Runner-up Row -->
-          <div class="flex items-center justify-between gap-1 min-w-0" id="kpiRunnerUpRow">
-            <span class="text-slate-500 dark:text-slate-400 flex items-center gap-1 min-w-0 truncate">
+          <div class="flex items-center justify-between gap-1 min-w-0 cursor-pointer p-1 -m-1 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 transition group" id="kpiRunnerUpRow" title="Click to view runner-up category transactions">
+            <span class="text-slate-500 dark:text-slate-400 flex items-center gap-1 min-w-0 truncate group-hover:text-cyan-400 transition">
               <span id="topCat2Dot" class="w-1.5 h-1.5 rounded-full bg-cyan-400 shrink-0"></span>
               <span class="text-[9px] font-extrabold px-1 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 shrink-0">#2</span>
-              <span id="kpiRunnerUpCategory" class="truncate font-medium text-slate-700 dark:text-slate-300">None</span>
+              <span id="kpiRunnerUpCategory" class="truncate font-medium text-slate-700 dark:text-slate-300 group-hover:text-cyan-300">None</span>
             </span>
-            <span id="kpiRunnerUpAmount" class="font-bold text-cyan-600 dark:text-cyan-400 shrink-0 text-right">₹0 (0%)</span>
+            <div class="flex items-center gap-1 shrink-0">
+              <span id="kpiRunnerUpAmount" class="font-bold text-cyan-600 dark:text-cyan-400 text-right">₹0 (0%)</span>
+              <span class="text-[9px] text-cyan-400 opacity-0 group-hover:opacity-100 transition">&rarr;</span>
+            </div>
           </div>
           <!-- Combined Share Row -->
           <div class="flex items-center justify-between text-slate-400" id="kpiTop2ShareRow">
@@ -536,18 +554,20 @@
           <!-- Progress Bar Comparison -->
           <div>
             <div class="flex flex-wrap items-center justify-between gap-2 text-xs font-semibold mb-2">
-              <span class="flex items-center gap-1.5 text-indigo-400 bg-indigo-500/10 px-2 py-1 rounded-lg">
+              <span id="weekdayBtn" class="flex items-center gap-1.5 text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 px-2.5 py-1 rounded-lg cursor-pointer transition active:scale-95 group" title="Click to view weekday transactions">
                 <span>🗓️ Mon–Fri:</span>
                 <span id="weekdayAmount" class="font-bold text-slate-900 dark:text-white mono">₹0</span>
+                <span class="text-[9px] opacity-0 group-hover:opacity-100 text-indigo-300 transition">&rarr;</span>
               </span>
-              <span class="flex items-center gap-1.5 text-pink-400 bg-pink-500/10 px-2 py-1 rounded-lg">
+              <span id="weekendBtn" class="flex items-center gap-1.5 text-pink-400 bg-pink-500/10 hover:bg-pink-500/20 px-2.5 py-1 rounded-lg cursor-pointer transition active:scale-95 group" title="Click to view weekend transactions">
                 <span>🏖️ Sat–Sun:</span>
                 <span id="weekendAmount" class="font-bold text-slate-900 dark:text-white mono">₹0</span>
+                <span class="text-[9px] opacity-0 group-hover:opacity-100 text-pink-300 transition">&rarr;</span>
               </span>
             </div>
-            <div class="w-full h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden flex">
-              <div id="weekdayBar" class="bg-indigo-500 h-full transition-all duration-500" style="width: 50%;"></div>
-              <div id="weekendBar" class="bg-pink-500 h-full transition-all duration-500" style="width: 50%;"></div>
+            <div class="w-full h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden flex cursor-pointer" id="weekendVsWeekdayBarContainer" title="Click to view breakdown">
+              <div id="weekdayBar" class="bg-indigo-500 h-full transition-all duration-500 hover:brightness-110" style="width: 50%;"></div>
+              <div id="weekendBar" class="bg-pink-500 h-full transition-all duration-500 hover:brightness-110" style="width: 50%;"></div>
             </div>
             <div class="flex justify-between text-[11px] text-slate-400 mt-1 font-medium">
               <span id="weekdayPct">50%</span>
@@ -1132,7 +1152,7 @@
       <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 shrink-0">
         <div class="flex items-center gap-3">
           <div class="w-12 h-12 flex items-center justify-center shrink-0">
-            <img src="assets/mascots/ant-mascot.png" alt="Ant Mascot" class="h-12 w-auto object-contain drop-shadow-md select-none" />
+            <img id="breakdownModalMascotImg" src="assets/mascots/ant-mascot.png" alt="Mascot" class="h-12 w-auto object-contain drop-shadow-md select-none" />
           </div>
           <div>
             <h3 class="text-sm sm:text-base font-bold text-slate-900 dark:text-white" id="microModalTitle">Micro-Purchases Breakdown</h3>
@@ -1251,7 +1271,7 @@
   </div>
 
   <!-- App Logic -->
-  <script src="app.js?v=55"></script>
+  <script src="app.js?v=56"></script>
 </body>
 </html>
 
