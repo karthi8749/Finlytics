@@ -1921,17 +1921,17 @@
     // Render cards with full-height transparent mascots & mobile optimization
     aiGrid.innerHTML = insights.slice(0, 4).map((item, idx) => {
       const colorMap = {
-        rose: { bg: 'bg-rose-500/10 border-rose-500/20 text-rose-400', badge: 'bg-rose-500/20 text-rose-300', text: 'text-rose-400' },
-        amber: { bg: 'bg-amber-500/10 border-amber-500/20 text-amber-400', badge: 'bg-amber-500/20 text-amber-300', text: 'text-amber-400' },
-        blue: { bg: 'bg-blue-500/10 border-blue-500/20 text-blue-400', badge: 'bg-blue-500/20 text-blue-300', text: 'text-blue-400' },
-        emerald: { bg: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400', badge: 'bg-emerald-500/20 text-emerald-300', text: 'text-emerald-400' },
-        indigo: { bg: 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400', badge: 'bg-indigo-500/20 text-indigo-300', text: 'text-indigo-400' }
+        rose: { bg: 'bg-rose-50/50 dark:bg-rose-500/10 border-rose-200/80 dark:border-rose-500/20 text-rose-600 dark:text-rose-400', badge: 'bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-500/30', text: 'text-rose-600 dark:text-rose-400' },
+        amber: { bg: 'bg-amber-50/50 dark:bg-amber-500/10 border-amber-200/80 dark:border-amber-500/20 text-amber-700 dark:text-amber-400', badge: 'bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30', text: 'text-amber-700 dark:text-amber-400' },
+        blue: { bg: 'bg-blue-50/50 dark:bg-blue-500/10 border-blue-200/80 dark:border-blue-500/20 text-blue-600 dark:text-blue-400', badge: 'bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30', text: 'text-blue-600 dark:text-blue-400' },
+        emerald: { bg: 'bg-emerald-50/50 dark:bg-emerald-500/10 border-emerald-200/80 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-400', badge: 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30', text: 'text-emerald-700 dark:text-emerald-400' },
+        indigo: { bg: 'bg-indigo-50/50 dark:bg-indigo-500/10 border-indigo-200/80 dark:border-indigo-500/20 text-indigo-600 dark:text-indigo-400', badge: 'bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30', text: 'text-indigo-600 dark:text-indigo-400' }
       };
       const theme = colorMap[item.color] || colorMap.indigo;
       const count = item.items ? item.items.length : 0;
 
       return `
-        <div data-ai-idx="${idx}" class="relative overflow-hidden p-3.5 sm:p-4 rounded-2xl bg-slate-900/80 dark:bg-slate-900/95 border ${theme.bg} backdrop-blur-sm flex flex-col justify-between hover:border-emerald-500/50 transition group cursor-pointer hover:scale-[1.01] active:scale-[0.99] shadow-lg shadow-black/20" title="Click to view transactions">
+        <div data-ai-idx="${idx}" class="relative overflow-hidden p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-slate-900/95 border ${theme.bg} shadow-sm dark:shadow-lg dark:shadow-black/20 flex flex-col justify-between hover:border-emerald-500/50 transition group cursor-pointer hover:scale-[1.01] active:scale-[0.99]" title="Click to view transactions">
           
           <div class="flex items-center justify-between gap-3">
             <!-- Left Text Content -->
@@ -1945,10 +1945,10 @@
                   <span>&rarr;</span>
                 </span>
               </div>
-              <h4 class="text-xs sm:text-sm font-bold text-white tracking-tight group-hover:text-emerald-400 transition">
+              <h4 class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white tracking-tight group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition">
                 ${item.title}
               </h4>
-              <p class="text-[11px] sm:text-xs text-slate-300/90 leading-relaxed pr-1 line-clamp-3 sm:line-clamp-none">
+              <p class="text-[11px] sm:text-xs text-slate-600 dark:text-slate-300/90 leading-relaxed pr-1 line-clamp-3 sm:line-clamp-none">
                 ${item.desc}
               </p>
             </div>
@@ -1960,14 +1960,14 @@
               </div>
             ` : `
               <div class="shrink-0">
-                <div class="w-9 h-9 rounded-xl bg-slate-800/80 flex items-center justify-center border border-slate-700/60">
+                <div class="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800/80 flex items-center justify-center border border-slate-200 dark:border-slate-700/60">
                   <i data-lucide="${item.icon}" class="w-4 h-4 ${theme.bg.split(' ')[2]}"></i>
                 </div>
               </div>
             `}
           </div>
 
-          <div class="mt-2.5 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] sm:text-[11px] ${theme.text} font-medium z-10">
+          <div class="mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[10px] sm:text-[11px] ${theme.text} font-medium z-10">
             <span>Tap card to view ${count > 0 ? count : ''} matching transactions</span>
             <span>&rarr;</span>
           </div>
@@ -2038,7 +2038,7 @@
           : 'hidden';
       }
       if (pulseDot) {
-        pulseDot.className = `relative inline-flex rounded-full h-3.5 w-3.5 bg-${color}-500 border-2 border-slate-950 shadow-sm`;
+        pulseDot.className = `relative inline-flex rounded-full h-3.5 w-3.5 bg-${color}-500 border-2 border-white dark:border-slate-950 shadow-sm`;
       }
     }
 
@@ -2047,7 +2047,7 @@
       mascotImg.className = 'h-12 sm:h-14 w-auto object-contain drop-shadow-xl mascot-float select-none';
       updatePulseStatus('slate', false);
       if (statusBadge) {
-        statusBadge.className = 'text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-500/15 text-slate-400 border border-slate-500/20';
+        statusBadge.className = 'text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-500/15 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-500/20';
         statusBadge.textContent = '⚪ Ready to Track';
       }
       if (leakSummary) leakSummary.textContent = 'No spends recorded yet';
@@ -2067,7 +2067,7 @@
       mascotImg.className = 'h-12 sm:h-14 w-auto object-contain drop-shadow-xl mascot-float select-none';
       updatePulseStatus('rose', true);
       if (statusBadge) {
-        statusBadge.className = 'text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30';
+        statusBadge.className = 'text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-500/30';
         statusBadge.textContent = '🔴 Vampire Drain Active';
       }
       if (leakSummary) leakSummary.textContent = `Biggest: ${topTxn.title} (${formatINR(topTxn.amount)})`;
@@ -2077,7 +2077,7 @@
       mascotImg.className = 'h-12 sm:h-14 w-auto object-contain drop-shadow-xl mascot-bob select-none';
       updatePulseStatus('emerald', true);
       if (statusBadge) {
-        statusBadge.className = 'text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
+        statusBadge.className = 'text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30';
         statusBadge.textContent = '🦖 Foodie Dino Feasting!';
       }
       if (leakSummary) leakSummary.textContent = `${foodItems.length} Food orders (${formatINR(foodSum)})`;
@@ -2087,7 +2087,7 @@
       mascotImg.className = 'h-12 sm:h-14 w-auto object-contain drop-shadow-xl mascot-bob select-none';
       updatePulseStatus('amber', true);
       if (statusBadge) {
-        statusBadge.className = 'text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30';
+        statusBadge.className = 'text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30';
         statusBadge.textContent = '🐜 Sugar Ant Micro-Leak';
       }
       if (leakSummary) leakSummary.textContent = `${microItems.length} small spends ≤ ₹200 (${formatINR(microSum)})`;
@@ -2097,7 +2097,7 @@
       mascotImg.className = 'h-12 sm:h-14 w-auto object-contain drop-shadow-xl mascot-float select-none';
       updatePulseStatus('indigo', true);
       if (statusBadge) {
-        statusBadge.className = 'text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-400 border border-indigo-500/30';
+        statusBadge.className = 'text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/30';
         statusBadge.textContent = '👻 Ghost Mandates Active';
       }
       if (leakSummary) leakSummary.textContent = `${subItems.length} recurring subs (${formatINR(subSum)})`;
@@ -2107,7 +2107,7 @@
       mascotImg.className = 'h-12 sm:h-14 w-auto object-contain drop-shadow-xl mascot-float select-none';
       updatePulseStatus('emerald', false);
       if (statusBadge) {
-        statusBadge.className = 'text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20';
+        statusBadge.className = 'text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20';
         statusBadge.textContent = '🟢 Budget Healthy';
       }
       if (leakSummary) leakSummary.textContent = `Mascots are chilling!`;
